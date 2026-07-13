@@ -1,5 +1,31 @@
 import { create } from "zustand";
 
+
+
+const getDefaultDeliveryTime = () => {
+  const now = new Date();
+
+  let hour = now.getHours();
+  let minute = now.getMinutes();
+
+  if (minute <= 30) {
+    minute = 30;
+  } else {
+    minute = 0;
+    hour++;
+
+    if (hour === 24) {
+      hour = 0;
+    }
+  }
+
+  return `${hour.toString().padStart(2, "0")}:${minute
+    .toString()
+    .padStart(2, "0")}`;
+};
+
+
+
 const calculateGrandTotal = (state) => {
   const itemsTotal = state.items.reduce(
     (sum, item) => sum + Number(item.total || 0),
@@ -8,8 +34,7 @@ const calculateGrandTotal = (state) => {
 
   return (
     itemsTotal +
-    Number(state.deliveryCharge || 0) +
-    Number(state.otherCharges || 0) -
+    Number(state.deliveryCharge || 0) -
     Number(state.discount || 0)
   );
 };
@@ -20,11 +45,10 @@ const useOrderStore = create((set) => ({
   mobile: "",
 
   deliveryDate: new Date().toISOString().split("T")[0],
-  deliveryTime: "12:00",
+  deliveryTime: getDefaultDeliveryTime(),
   
   deliveryCharge: 0,
   discount: 0,
-  otherCharges: 0,
 
   items: [],
 
@@ -131,7 +155,6 @@ const useOrderStore = create((set) => ({
 
         deliveryCharge: Number(order.delivery_charge),
         discount: Number(order.discount),
-        otherCharges: Number(order.other_charges),
     
         items: order.items.map((item) => ({
           dish_id: item.dish_id,
@@ -154,11 +177,10 @@ const useOrderStore = create((set) => ({
       mobile: "",
 
       deliveryDate: new Date().toISOString().split("T")[0],
-      deliveryTime: "12:00",
+      deliveryTime: getDefaultDeliveryTime(),
 
       deliveryCharge: 0,
       discount: 0,
-      otherCharges: 0,
 
       items: [],
 
@@ -168,5 +190,8 @@ const useOrderStore = create((set) => ({
       editingOrderId: null,
     }),
 }));
+
+
+
 
 export default useOrderStore;

@@ -1,15 +1,81 @@
 @import "tailwindcss";
 
 @keyframes slideUp {
-    from {
-      transform: translateY(100%);
-    }
-  
-    to {
-      transform: translateY(0);
-    }
+  from {
+    transform: translateY(100%);
   }
-  
-  .animate-slide-up {
-    animation: slideUp 0.25s ease;
+  to {
+    transform: translateY(0);
   }
+}
+
+@keyframes fadeScaleIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.animate-dropdown {
+  animation: fadeScaleIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top;
+}
+
+/* Hide scrollbars while keeping scroll — mobile-friendly */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Safe area helpers for notched devices */
+.pb-safe {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+.pt-safe {
+  padding-top: max(1.25rem, env(safe-area-inset-top));
+}
+
+/* Premium tactile press feedback */
+.press-scale {
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.12s ease;
+}
+
+.press-scale:active {
+  transform: scale(0.96);
+}
+
+/* Smooth number input, remove spinner arrows for a cleaner premium look */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
