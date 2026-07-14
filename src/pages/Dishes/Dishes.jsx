@@ -9,8 +9,10 @@ import {
 } from "../../api/dishApi";
 import DishCard from "../../components/DishCard";
 import DishModal from "../../components/DishModal";
+import { useToastStore } from "../../store/toastStore";
 
 const Dishes = () => {
+  const toast = useToastStore();
   const [dishes, setDishes] = useState([]);
   const [search, setSearch] = useState("");
 
@@ -83,15 +85,23 @@ const Dishes = () => {
     }
   };
 
-  const handleDelete = async (dish) => {
-    if (!window.confirm(`Delete "${dish.dish_name}"?`)) return;
-
-    try {
-      await deleteDish(dish.dish_id);
-      loadDishes();
-    } catch (error) {
-      console.error(error);
-    }
+  const handleDelete = (dish) => {
+    toast.confirm({
+      title: "Delete Dish?",
+      message: `Delete "${dish.dish_name}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      onConfirm: async () => {
+        try {
+          await deleteDish(dish.dish_id);
+          loadDishes();
+          toast.success("Deleted", "Dish deleted successfully.");
+        } catch (error) {
+          console.error(error);
+          toast.error("Failed", "Unable to delete dish.");
+        }
+      },
+    });
   };
 
   return (

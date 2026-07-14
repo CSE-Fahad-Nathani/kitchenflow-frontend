@@ -9,8 +9,10 @@ import {
 } from "../../api/customerApi";
 import CustomerCard from "../../components/CustomerCard";
 import CustomerModal from "../../components/CustomerModal";
+import { useToastStore } from "../../store/toastStore";
 
 const Customers = () => {
+  const toast = useToastStore();
   const [customers, setCustomers] = useState([]);
   const [search, setSearch] = useState("");
 
@@ -74,15 +76,23 @@ const Customers = () => {
     }
   };
 
-  const handleDelete = async (customer) => {
-    if (!window.confirm(`Delete ${customer.name}?`)) return;
-
-    try {
-      await deleteCustomer(customer.customer_id);
-      loadCustomers();
-    } catch (error) {
-      console.error(error);
-    }
+  const handleDelete = (customer) => {
+    toast.confirm({
+      title: "Delete Customer?",
+      message: `Delete ${customer.name}? This cannot be undone.`,
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      onConfirm: async () => {
+        try {
+          await deleteCustomer(customer.customer_id);
+          loadCustomers();
+          toast.success("Deleted", "Customer deleted successfully.");
+        } catch (error) {
+          console.error(error);
+          toast.error("Failed", "Unable to delete customer.");
+        }
+      },
+    });
   };
 
   return (

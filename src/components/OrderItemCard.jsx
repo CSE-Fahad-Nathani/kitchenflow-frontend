@@ -1,40 +1,59 @@
 import { useEffect, useRef, useState } from "react";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Loader2, Minus, Plus, Trash2 } from "lucide-react";
 import { searchDishes } from "../api/dishApi";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
 
 const inputClass =
   "w-full h-10 bg-gray-50 border border-gray-200 rounded-lg px-2.5 text-sm outline-none focus:border-orange-400 focus:bg-white focus:ring-4 focus:ring-orange-100 transition-all";
 
 const OrderItemCard = ({ item, index, onChange, onDelete }) => {
   const [suggestions, setSuggestions] = useState([]);
-  const skipSearchRef = useRef(false);
+  const [searching, setSearching] = useState(false);
+  const lastSelectedRef = useRef("");
+  const requestIdRef = useRef(0);
+
+  const debouncedDishName = useDebouncedValue(item.dish_name, 350);
 
   useEffect(() => {
-    if (!item.dish_name.trim()) {
+    if (!debouncedDishName.trim()) {
       setSuggestions([]);
+      setSearching(false);
       return;
     }
 
-    // Skip search right after a suggestion was selected
-    if (skipSearchRef.current) {
-      skipSearchRef.current = false;
+    if (debouncedDishName === lastSelectedRef.current) {
       setSuggestions([]);
+      setSearching(false);
       return;
     }
 
-    const timer = setTimeout(async () => {
+    const requestId = ++requestIdRef.current;
+    setSearching(true);
+
+    const fetchData = async () => {
       try {
-        const data = await searchDishes(item.dish_name);
+        const data = await searchDishes(debouncedDishName);
+        if (requestId !== requestIdRef.current) return;
         setSuggestions(data);
       } catch (error) {
         console.error(error);
+        if (requestId !== requestIdRef.current) return;
+        setSuggestions([]);
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setSearching(false);
+        }
       }
-    }, 300);
+    };
 
-    return () => clearTimeout(timer);
-  }, [item.dish_name]);
+    fetchData();
+  }, [debouncedDishName]);
 
   const updateField = (field, value) => {
+    if (field === "dish_name") {
+      lastSelectedRef.current = "";
+    }
+
     const updated = {
       ...item,
       [field]: value,
@@ -79,17 +98,24 @@ const OrderItemCard = ({ item, index, onChange, onDelete }) => {
             placeholder="Dish name"
             value={item.dish_name}
             onChange={(e) => updateField("dish_name", e.target.value)}
-            className={`${inputClass} font-medium`}
+            className={`${inputClass} font-medium ${searching ? "pr-8" : ""}`}
           />
 
-          {suggestions.length > 0 && (
+          {searching && (
+            <Loader2
+              size={14}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-orange-400 animate-spin"
+            />
+          )}
+
+          {suggestions.length > 0 && !searching && (
             <div className="animate-dropdown absolute left-0 right-0 mt-1.5 bg-white border border-gray-100 rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.12)] z-20 max-h-40 overflow-y-auto scrollbar-none">
               {suggestions.map((dish) => (
                 <button
                   key={dish.dish_id}
                   type="button"
                   onClick={() => {
-                    skipSearchRef.current = true;
+                    lastSelectedRef.current = dish.dish_name;
                     onChange(index, {
                       ...item,
                       dish_id: dish.dish_id,

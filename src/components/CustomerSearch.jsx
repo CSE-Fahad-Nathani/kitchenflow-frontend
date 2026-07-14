@@ -1,37 +1,51 @@
 import { useEffect, useRef, useState } from "react";
-import { Search, User } from "lucide-react";
+import { Loader2, Search, User } from "lucide-react";
 import { searchCustomers } from "../api/customerApi";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
 
 const CustomerSearch = ({ value, onSelect, onChange }) => {
   const [customers, setCustomers] = useState([]);
-  const skipSearchRef = useRef(false);
+  const [searching, setSearching] = useState(false);
+  const lastSelectedRef = useRef("");
+  const requestIdRef = useRef(0);
+
+  const debouncedValue = useDebouncedValue(value, 350);
 
   useEffect(() => {
-    if (!value.trim()) {
+    if (!debouncedValue.trim()) {
       setCustomers([]);
+      setSearching(false);
       return;
     }
 
-    // Skip search right after a suggestion was selected
-    if (skipSearchRef.current) {
-      skipSearchRef.current = false;
+    // Skip API when value came from a suggestion pick
+    if (debouncedValue === lastSelectedRef.current) {
       setCustomers([]);
+      setSearching(false);
       return;
     }
+
+    const requestId = ++requestIdRef.current;
+    setSearching(true);
 
     const fetchData = async () => {
       try {
-        const data = await searchCustomers(value);
+        const data = await searchCustomers(debouncedValue);
+        if (requestId !== requestIdRef.current) return;
         setCustomers(data);
       } catch (error) {
         console.error(error);
+        if (requestId !== requestIdRef.current) return;
+        setCustomers([]);
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setSearching(false);
+        }
       }
     };
 
-    const timer = setTimeout(fetchData, 300);
-
-    return () => clearTimeout(timer);
-  }, [value]);
+    fetchData();
+  }, [debouncedValue]);
 
   return (
     <div className="relative">
@@ -42,20 +56,30 @@ const CustomerSearch = ({ value, onSelect, onChange }) => {
 
       <input
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Customer name"
+        onChange={(e) => {
+          lastSelectedRef.current = "";
+          onChange(e.target.value);
+        }}
+        placeholder="Customer name (optional)"
         autoComplete="off"
-        className="w-full h-12 bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-3.5 text-[15px] font-medium outline-none focus:border-orange-400 focus:bg-white focus:ring-4 focus:ring-orange-100 transition-all"
+        className="w-full h-12 bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-10 text-[15px] font-medium outline-none focus:border-orange-400 focus:bg-white focus:ring-4 focus:ring-orange-100 transition-all"
       />
 
-      {customers.length > 0 && (
+      {searching && (
+        <Loader2
+          size={16}
+          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-orange-400 animate-spin"
+        />
+      )}
+
+      {customers.length > 0 && !searching && (
         <div className="animate-dropdown absolute z-30 w-full mt-1.5 bg-white border border-gray-100 rounded-xl shadow-[0_8px_28px_rgba(0,0,0,0.12)] max-h-52 overflow-y-auto scrollbar-none">
           {customers.map((customer) => (
             <button
               key={customer.customer_id}
               type="button"
               onClick={() => {
-                skipSearchRef.current = true;
+                lastSelectedRef.current = customer.name;
                 onSelect(customer);
                 setCustomers([]);
               }}

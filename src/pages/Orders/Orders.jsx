@@ -122,20 +122,6 @@ const Orders = () => {
   const handlePreview = async () => {
     if (!canFinalize) return;
 
-    if (!customer.trim()) {
-      return toast.warning(
-        "Customer Required",
-        "Please enter customer name."
-      );
-    }
-
-    if (!mobile.trim()) {
-      return toast.warning(
-        "Mobile Required",
-        "Please enter mobile number."
-      );
-    }
-
     const incompleteItem = items.find(
       (item) => !item.dish_name.trim() || Number(item.total) <= 0
     );
@@ -148,9 +134,9 @@ const Orders = () => {
     }
 
     const payload = {
-      customer_id,
-      customer_name: customer.trim(),
-      customer_mobile: mobile.trim(),
+      customer_id: customer_id || null,
+      customer_name: customer.trim() || null,
+      customer_mobile: mobile.trim() || null,
       delivery_datetime: `${deliveryDate}T${deliveryTime}:00`,
       delivery_charge: Number(deliveryCharge),
       discount: Number(discount),
@@ -258,7 +244,7 @@ const Orders = () => {
                 inputMode="numeric"
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value)}
-                placeholder="Mobile number"
+                placeholder="Mobile number (optional)"
                 className="w-full h-12 bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-3.5 text-[15px] outline-none focus:border-orange-400 focus:bg-white focus:ring-4 focus:ring-orange-100 transition-all"
               />
             </div>
