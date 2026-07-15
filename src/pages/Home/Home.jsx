@@ -6,7 +6,6 @@ import {
   Star,
   Settings,
   ChevronRight,
-  Sparkles,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -161,77 +160,70 @@ const Home = () => {
 
   return (
     <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-24">
-      <header className="relative bg-gradient-to-br from-orange-500 to-orange-600 px-5 pt-safe pb-7 rounded-b-[1.75rem] shadow-[0_8px_24px_-8px_rgba(249,115,22,0.5)] overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute top-6 right-8 w-16 h-16 bg-white/10 rounded-full blur-xl pointer-events-none" />
+      <header className="relative bg-gradient-to-br from-orange-500 to-orange-600 px-4 pt-safe pb-5 rounded-b-[1.5rem] shadow-[0_8px_24px_-8px_rgba(249,115,22,0.5)] overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-36 h-36 bg-white/10 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="relative flex items-center gap-1.5">
-          <Sparkles size={11} className="text-orange-200" strokeWidth={2.5} />
-          <p className="text-orange-100 text-[11px] font-semibold tracking-[0.12em] uppercase">
-            Arefa's Kitchen
-          </p>
-        </div>
-        <h1 className="relative text-[1.7rem] font-bold text-white leading-tight mt-1 tracking-tight">
+        <p className="relative text-orange-100 text-[10px] font-semibold tracking-[0.12em] uppercase">
+          Arefa's Kitchen
+        </p>
+        <h1 className="relative text-[1.35rem] font-bold text-white leading-tight mt-0.5 tracking-tight">
           KitchenFlow
         </h1>
-        <p className="relative text-orange-100/90 text-[13px] mt-1 font-medium">
-          Dashboard overview
-        </p>
       </header>
 
-      <div className="px-4 pt-5">
+      <div className="px-3.5 pt-3">
         {loading ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <StatCardSkeleton />
             <StatCardSkeleton />
             <StatCardSkeleton />
             <StatCardSkeleton />
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.04)] p-4">
-              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-white rounded-xl border border-gray-100 px-3 py-2.5">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                 Today's Orders
               </p>
-              <h2 className="text-2xl font-bold mt-1.5 text-gray-900">
+              <h2 className="text-xl font-bold mt-0.5 text-gray-900 leading-tight">
                 {stats.today_orders}
               </h2>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.04)] p-4">
-              <div className="flex justify-between items-start gap-2">
+            <div className="bg-white rounded-xl border border-gray-100 px-3 py-2.5">
+              <div className="flex justify-between items-start gap-1.5">
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                     Today's Revenue
                   </p>
-                  <h2 className="text-2xl font-bold mt-1.5 text-green-600">
+                  <h2 className="text-xl font-bold mt-0.5 text-green-600 leading-tight">
                     ₹{Number(stats.today_revenue).toFixed(0)}
                   </h2>
                 </div>
                 <button
                   type="button"
                   onClick={handleRevenueClick}
-                  className="text-[11px] font-bold text-orange-500 bg-orange-50 border border-orange-100 px-2.5 py-1 rounded-full shrink-0"
+                  className="text-[10px] font-bold text-orange-500 bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-full shrink-0"
                 >
                   View
                 </button>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.04)] p-4">
-              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+            <div className="bg-white rounded-xl border border-gray-100 px-3 py-2.5">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                 Pending Orders
               </p>
-              <h2 className="text-2xl font-bold mt-1.5 text-gray-900">
+              <h2 className="text-xl font-bold mt-0.5 text-gray-900 leading-tight">
                 {stats.pending_orders}
               </h2>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.04)] p-4">
-              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+            <div className="bg-white rounded-xl border border-gray-100 px-3 py-2.5">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                 Pending Amount
               </p>
-              <h2 className="text-2xl font-bold mt-1.5 text-orange-500">
+              <h2 className="text-xl font-bold mt-0.5 text-orange-500 leading-tight">
                 ₹{Number(stats.pending_amount).toFixed(0)}
               </h2>
             </div>
@@ -239,36 +231,36 @@ const Home = () => {
         )}
       </div>
 
-      <div className="p-4">
+      <div className="px-3.5 pt-2.5 pb-2">
         {loading ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
-            <div className="flex items-center gap-4">
-              <div className="w-[34px] h-[34px] rounded-xl bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%] animate-[shimmer_1.4s_ease_infinite]" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 w-28 rounded-md bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%] animate-[shimmer_1.4s_ease_infinite]" />
-                <div className="h-3 w-24 rounded-md bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%] animate-[shimmer_1.4s_ease_infinite]" />
-              </div>
+          <div className="bg-white rounded-xl border border-gray-100 px-3 py-2.5 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%] animate-[shimmer_1.4s_ease_infinite]" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-3 w-24 rounded-md bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%] animate-[shimmer_1.4s_ease_infinite]" />
+              <div className="h-2.5 w-20 rounded-md bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%] animate-[shimmer_1.4s_ease_infinite]" />
             </div>
           </div>
         ) : (
           <button
             type="button"
             onClick={() => navigate("/orders")}
-            className="press-scale w-full bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 shadow-lg shadow-orange-500/25 text-white flex items-center justify-between"
+            className="press-scale w-full bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl px-3.5 py-3 shadow-md shadow-orange-500/25 text-white flex items-center justify-between"
           >
-            <div className="flex items-center gap-4">
-              <ShoppingCart size={34} />
+            <div className="flex items-center gap-3">
+              <ShoppingCart size={22} />
               <div className="text-left">
-                <h2 className="text-lg font-semibold">New Order</h2>
-                <p className="text-orange-100 text-sm">Generate Bill</p>
+                <h2 className="text-[15px] font-semibold leading-tight">
+                  New Order
+                </h2>
+                <p className="text-orange-100 text-[11px]">Generate Bill</p>
               </div>
             </div>
-            <ChevronRight />
+            <ChevronRight size={18} />
           </button>
         )}
       </div>
 
-      <div className="px-4 space-y-3">
+      <div className="px-3.5 space-y-1.5">
         {loading
           ? Array.from({ length: 5 }).map((_, i) => (
               <MenuRowSkeleton key={i} />
@@ -281,20 +273,22 @@ const Home = () => {
                   key={menu.title}
                   type="button"
                   onClick={() => navigate(menu.path)}
-                  className="press-scale w-full bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.04)] p-4 flex items-center justify-between"
+                  className="press-scale w-full bg-white rounded-xl border border-gray-100 px-3 py-2.5 flex items-center justify-between"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-100 to-orange-50 border border-orange-100/80 flex items-center justify-center">
-                      <Icon size={22} className="text-orange-500" />
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center">
+                      <Icon size={16} className="text-orange-500" />
                     </div>
                     <div className="text-left">
-                      <h3 className="font-semibold text-gray-900">
+                      <h3 className="font-semibold text-[13.5px] text-gray-900 leading-tight">
                         {menu.title}
                       </h3>
-                      <p className="text-sm text-gray-500">{menu.subtitle}</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5">
+                        {menu.subtitle}
+                      </p>
                     </div>
                   </div>
-                  <ChevronRight size={18} className="text-gray-400" />
+                  <ChevronRight size={16} className="text-gray-400" />
                 </button>
               );
             })}

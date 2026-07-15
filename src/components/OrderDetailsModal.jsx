@@ -1,12 +1,4 @@
-import {
-  Bell,
-  CalendarDays,
-  Check,
-  Pencil,
-  Phone,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Bell, Check, Pencil, Trash2, X } from "lucide-react";
 
 const formatMoney = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN")}`;
@@ -23,23 +15,19 @@ const OrderDetailsModal = ({
 }) => {
   if (!open || !order) return null;
 
-  const deliveryDate = new Date(order.delivery_datetime);
+  const delivery = new Date(order.delivery_datetime);
 
-  const date = deliveryDate.toLocaleDateString([], {
-    day: "numeric",
+  const date = delivery.toLocaleDateString("en-GB", {
+    day: "2-digit",
     month: "short",
     year: "numeric",
   });
 
-  const time = deliveryDate.toLocaleTimeString([], {
-    hour: "2-digit",
+  const time = delivery.toLocaleTimeString("en-IN", {
+    hour: "numeric",
     minute: "2-digit",
+    hour12: true,
   });
-
-  const subtotal = order.items.reduce(
-    (sum, item) => sum + Number(item.total_price),
-    0
-  );
 
   return (
     <div
@@ -48,22 +36,19 @@ const OrderDetailsModal = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md mx-auto bg-white rounded-t-3xl max-h-[90vh] overflow-hidden animate-slide-up shadow-[0_-8px_40px_rgba(0,0,0,0.15)] flex flex-col"
+        className="w-full max-w-md mx-auto bg-white rounded-t-3xl max-h-[90dvh] overflow-hidden animate-slide-up shadow-[0_-8px_40px_rgba(0,0,0,0.15)] flex flex-col"
       >
-        {/* Header */}
-        <div className="shrink-0 px-5 pt-3 pb-4 border-b border-gray-100 bg-gradient-to-b from-orange-50/80 to-white">
-          <div className="w-11 h-1.5 bg-gray-300/90 rounded-full mx-auto mb-4" />
+        {/* Compact header */}
+        <div className="shrink-0 px-4 pt-2.5 pb-3 border-b border-gray-100">
+          <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-3" />
 
-          <div className="flex justify-between items-start gap-3">
-            <div>
-              <p className="text-[11px] font-semibold text-orange-500 uppercase tracking-[0.12em]">
-                Order details
-              </p>
-              <h2 className="text-xl font-bold text-gray-900 mt-0.5">
+          <div className="flex justify-between items-center gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <h2 className="text-[15px] font-bold text-gray-900 truncate">
                 #{order.order_number}
               </h2>
               <span
-                className={`inline-block mt-2 text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                   order.is_paid
                     ? "text-emerald-700 bg-emerald-50 border border-emerald-100"
                     : "text-amber-700 bg-amber-50 border border-amber-100"
@@ -77,120 +62,160 @@ const OrderDetailsModal = ({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="press-scale w-10 h-10 rounded-xl bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-500 active:bg-gray-50"
+              className="press-scale w-8 h-8 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-500 active:bg-gray-100"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
           </div>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-none p-4 space-y-4">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.04)] p-4">
-            <p className="font-semibold text-[17px] text-gray-900">
-              {order.customer_name?.trim() || `Order #${order.order_number}`}
-            </p>
-
-            {order.customer_mobile?.trim() && (
-              <div className="mt-2.5 flex items-center gap-2 text-sm text-gray-500 font-medium">
-                <Phone size={15} className="text-orange-400" />
-                {order.customer_mobile}
+        {/* Bill-style body */}
+        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-none bg-gray-100 p-3">
+          <div className="bg-white mx-auto w-full max-w-[340px] shadow-sm rounded-lg overflow-hidden">
+            <div className="px-4 pt-5 pb-4">
+              <div className="text-center">
+                <h1 className="text-[20px] font-bold text-gray-900 tracking-tight">
+                  Arefa's Kitchen
+                </h1>
+                <p className="text-gray-500 text-[11px] mt-0.5">Homemade Food</p>
+                <p className="text-orange-500 text-[10px] font-semibold mt-1.5 tracking-wide uppercase">
+                  Tax Invoice / Bill
+                </p>
               </div>
-            )}
 
-            <div className="mt-2 flex items-center gap-2 text-sm text-gray-500 font-medium">
-              <CalendarDays size={15} className="text-orange-400" />
-              {date} • {time}
-            </div>
-          </div>
+              <div className="border-t border-dashed border-gray-300 my-3.5" />
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.04)] p-4">
-            <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">
-              Items
-            </h3>
+              <div className="space-y-1 text-[12.5px] text-gray-700">
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-500">Bill No</span>
+                  <span className="font-semibold">#{order.order_number}</span>
+                </div>
 
-            <div className="space-y-3">
-              {order.items.map((item) => (
-                <div
-                  key={item.order_item_id}
-                  className="flex justify-between gap-3 items-start"
-                >
-                  <div className="min-w-0">
-                    <p className="font-semibold text-gray-900 text-[14px]">
-                      {item.dish_name}
-                    </p>
-                    <p className="text-[13px] text-gray-500 mt-0.5">
-                      {[item.variant_name, `× ${item.quantity}`]
-                        .filter(Boolean)
-                        .join(" · ")}
+                {order.customer_name?.trim() && (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-gray-500">Customer</span>
+                    <span className="font-semibold text-right">
+                      {order.customer_name.trim()}
+                    </span>
+                  </div>
+                )}
+
+                {order.customer_mobile?.trim() && (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-gray-500">Mobile</span>
+                    <span className="text-right">
+                      {order.customer_mobile.trim()}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-500">Delivery</span>
+                  <span className="text-right">
+                    {date}, {time}
+                  </span>
+                </div>
+              </div>
+
+              <div className="border-t border-dashed border-gray-300 my-3.5" />
+
+              <div className="flex justify-between text-[10px] uppercase tracking-wide text-gray-400 font-semibold mb-2">
+                <span>Item</span>
+                <span>Amount</span>
+              </div>
+
+              <div className="space-y-2.5">
+                {(order.items || []).map((item, idx) => (
+                  <div
+                    key={item.order_item_id || `${item.dish_name}-${idx}`}
+                    className="flex justify-between gap-3 items-start"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-semibold text-[12.5px] text-gray-900 leading-snug">
+                        {item.dish_name}
+                      </p>
+                      <p className="text-[11px] text-gray-500 mt-0.5">
+                        {[item.variant_name, `× ${item.quantity}`]
+                          .filter(Boolean)
+                          .join(" · ")}
+                        {Number(item.unit_price) > 0
+                          ? ` · ${formatMoney(item.unit_price)} each`
+                          : ""}
+                      </p>
+                    </div>
+                    <p className="text-[12.5px] font-semibold text-gray-900 shrink-0">
+                      {formatMoney(item.total_price)}
                     </p>
                   </div>
-                  <p className="font-bold text-gray-900 text-[14px] shrink-0">
-                    {formatMoney(item.total_price)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.04)] p-4 space-y-2 text-sm">
-            <div className="flex justify-between text-gray-500 font-medium">
-              <span>Subtotal</span>
-              <span>{formatMoney(subtotal)}</span>
-            </div>
-
-            <div className="flex justify-between text-gray-500 font-medium">
-              <span>Delivery</span>
-              <span>{formatMoney(order.delivery_charge)}</span>
-            </div>
-
-            {Number(order.discount) > 0 && (
-              <div className="flex justify-between text-emerald-600 font-medium">
-                <span>Discount</span>
-                <span>-{formatMoney(order.discount)}</span>
+                ))}
               </div>
-            )}
 
-            <div className="border-t border-dashed border-gray-200 pt-3 mt-1 flex justify-between items-baseline">
-              <span className="text-base font-bold text-gray-900">Total</span>
-              <span className="text-xl font-extrabold text-orange-500">
-                {formatMoney(order.total_amount)}
-              </span>
-            </div>
-          </div>
+              <div className="border-t border-dashed border-gray-300 my-3.5" />
 
-          {order.bill_notes && (
-            <div className="bg-white rounded-2xl border border-gray-100 p-4">
-              <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
-                Notes
-              </h3>
-              <p className="text-gray-600 text-sm leading-relaxed">
-                {order.bill_notes}
+              <div className="space-y-1 text-[12.5px]">
+                <div className="flex justify-between text-gray-600">
+                  <span>Delivery</span>
+                  <span>{formatMoney(order.delivery_charge)}</span>
+                </div>
+
+                {Number(order.discount) > 0 && (
+                  <div className="flex justify-between text-gray-600">
+                    <span>Discount</span>
+                    <span>-{formatMoney(order.discount)}</span>
+                  </div>
+                )}
+
+                <div className="border-t border-gray-200 pt-2.5 mt-1.5 flex justify-between items-baseline">
+                  <span className="text-[14px] font-bold text-gray-900">
+                    Total
+                  </span>
+                  <span className="text-lg font-extrabold text-orange-500">
+                    {formatMoney(order.total_amount)}
+                  </span>
+                </div>
+              </div>
+
+              {order.bill_notes && (
+                <>
+                  <div className="border-t border-dashed border-gray-300 my-3.5" />
+                  <p className="text-[11px] text-gray-500 leading-relaxed">
+                    <span className="font-semibold text-gray-600">Notes: </span>
+                    {order.bill_notes}
+                  </p>
+                </>
+              )}
+
+              <div className="border-t border-dashed border-gray-300 my-3.5" />
+
+              <p className="text-center text-[10px] text-gray-400 leading-relaxed">
+                Thank you for your order!
+                <br />
+                Homemade with care · Arefa's Kitchen
               </p>
             </div>
-          )}
+          </div>
 
           <button
             type="button"
             onClick={() => onReminder(order.order_id)}
-            className="press-scale w-full flex items-center justify-between rounded-2xl border border-orange-100 bg-orange-50/70 px-4 py-3.5 text-left active:bg-orange-100/70 transition-colors"
+            className="press-scale w-full max-w-[340px] mx-auto mt-2.5 flex items-center justify-between rounded-xl border border-orange-100 bg-orange-50/80 px-3 py-2.5 text-left active:bg-orange-100/70 transition-colors"
           >
-            <span className="flex items-center gap-2.5 text-sm font-semibold text-gray-700">
-              <span className="w-8 h-8 rounded-xl bg-white border border-orange-100 flex items-center justify-center text-orange-500">
-                <Bell size={15} />
+            <span className="flex items-center gap-2 text-[12.5px] font-semibold text-gray-700">
+              <span className="w-7 h-7 rounded-lg bg-white border border-orange-100 flex items-center justify-center text-orange-500">
+                <Bell size={13} />
               </span>
               Send Reminder
             </span>
-            <span className="text-[12px] font-bold text-orange-600 bg-white border border-orange-100 px-2.5 py-1 rounded-full">
+            <span className="text-[11px] font-bold text-orange-600 bg-white border border-orange-100 px-2 py-0.5 rounded-full">
               {order.reminder_count || 0}
             </span>
           </button>
         </div>
 
-        {/* Actions */}
-        <div className="shrink-0 border-t border-gray-100 bg-white p-3 pb-safe space-y-2.5">
+        {/* Compact actions */}
+        <div className="shrink-0 border-t border-gray-100 bg-white p-2.5">
           <div
-            className={`grid gap-2.5 ${
+            className={`grid gap-2 ${
               showDelete ? "grid-cols-3" : "grid-cols-2"
             }`}
           >
@@ -198,18 +223,18 @@ const OrderDetailsModal = ({
               <button
                 type="button"
                 onClick={() => onMarkPaid(order.order_id)}
-                className="press-scale h-12 rounded-xl font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 flex items-center justify-center gap-1.5 active:bg-emerald-100 transition-colors"
+                className="press-scale h-10 rounded-xl text-[12.5px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 flex items-center justify-center gap-1 active:bg-emerald-100 transition-colors"
               >
-                <Check size={16} strokeWidth={2.5} />
+                <Check size={14} strokeWidth={2.5} />
                 Paid
               </button>
             ) : (
               <button
                 type="button"
                 disabled
-                className="h-12 rounded-xl font-semibold text-emerald-700/70 bg-emerald-50/60 border border-emerald-100 flex items-center justify-center gap-1.5 cursor-not-allowed"
+                className="h-10 rounded-xl text-[12.5px] font-semibold text-emerald-700/70 bg-emerald-50/60 border border-emerald-100 flex items-center justify-center gap-1 cursor-not-allowed"
               >
-                <Check size={16} strokeWidth={2.5} />
+                <Check size={14} strokeWidth={2.5} />
                 Paid
               </button>
             )}
@@ -217,9 +242,9 @@ const OrderDetailsModal = ({
             <button
               type="button"
               onClick={() => onEdit(order)}
-              className="press-scale h-12 rounded-xl font-semibold text-white bg-gradient-to-br from-orange-500 to-orange-600 shadow-md shadow-orange-500/25 flex items-center justify-center gap-1.5"
+              className="press-scale h-10 rounded-xl text-[12.5px] font-semibold text-white bg-gradient-to-br from-orange-500 to-orange-600 shadow-md shadow-orange-500/25 flex items-center justify-center gap-1"
             >
-              <Pencil size={15} strokeWidth={2.35} />
+              <Pencil size={13} strokeWidth={2.35} />
               Edit
             </button>
 
@@ -227,9 +252,9 @@ const OrderDetailsModal = ({
               <button
                 type="button"
                 onClick={() => onDelete(order.order_id)}
-                className="press-scale h-12 rounded-xl font-semibold text-rose-600 bg-rose-50 border border-rose-200 flex items-center justify-center gap-1.5 active:bg-rose-100 transition-colors"
+                className="press-scale h-10 rounded-xl text-[12.5px] font-semibold text-rose-600 bg-rose-50 border border-rose-200 flex items-center justify-center gap-1 active:bg-rose-100 transition-colors"
               >
-                <Trash2 size={15} />
+                <Trash2 size={13} />
                 Delete
               </button>
             )}
