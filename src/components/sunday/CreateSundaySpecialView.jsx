@@ -1,5 +1,6 @@
 import { Plus, Loader2 } from "lucide-react";
 import SundayDishCard from "./SundayDishCard";
+import DateInput from "../DateInput";
 
 const fieldClass =
   "w-full h-9 bg-white border border-gray-200 rounded-xl px-3 text-[13px] font-medium outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all";
@@ -23,11 +24,11 @@ const CreateSundaySpecialView = ({
           <label className="block text-[11px] font-semibold text-gray-500 mb-1">
             Special Date
           </label>
-          <input
-            type="date"
+          <DateInput
             value={specialDate}
-            onChange={(e) => onDateChange(e.target.value)}
-            className={fieldClass}
+            onChange={onDateChange}
+            placeholder="Select special date"
+            className="[&_input]:bg-white"
           />
         </div>
 

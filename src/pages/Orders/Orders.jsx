@@ -17,6 +17,7 @@ import { useToastStore } from "../../store/toastStore";
 import { addOrder, updateOrder } from "../../api/orderApi";
 import { addCustomer } from "../../api/customerApi";
 import BillPreviewModal from "../../components/BillPreviewModal";
+import DateInput from "../../components/DateInput";
 
 const TIME_OPTIONS = (() => {
   const options = [];
@@ -356,49 +357,41 @@ const Orders = () => {
         <section className="space-y-1.5">
           <SectionLabel icon={CalendarDays}>Delivery</SectionLabel>
 
-          <div className="bg-white rounded-xl border border-gray-100 p-2.5">
-            <div className="grid grid-cols-2 gap-2">
-              <label className="block">
-                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                  Date
-                </span>
-                <div className="relative mt-1">
-                  <CalendarDays
-                    size={13}
-                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  />
-                  <input
-                    type="date"
-                    value={deliveryDate}
-                    onChange={(e) => setDeliveryDate(e.target.value)}
-                    className={`${fieldClass} pl-8 pr-2 appearance-none`}
-                  />
-                </div>
-              </label>
+          <div className="bg-white rounded-xl border border-gray-100 p-2.5 space-y-2">
+            <label className="block">
+              <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                Date
+              </span>
+              <DateInput
+                value={deliveryDate}
+                onChange={setDeliveryDate}
+                placeholder="Select delivery date"
+                className="mt-1"
+              />
+            </label>
 
-              <label className="block">
-                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                  Time
-                </span>
-                <div className="relative mt-1">
-                  <Clock
-                    size={13}
-                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  />
-                  <select
-                    value={deliveryTime}
-                    onChange={(e) => setDeliveryTime(e.target.value)}
-                    className={`${fieldClass} pl-8 pr-2 appearance-none`}
-                  >
-                    {TIME_OPTIONS.map((time) => (
-                      <option key={time.value} value={time.value}>
-                        {time.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </label>
-            </div>
+            <label className="block">
+              <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                Time
+              </span>
+              <div className="relative mt-1">
+                <Clock
+                  size={13}
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                />
+                <select
+                  value={deliveryTime}
+                  onChange={(e) => setDeliveryTime(e.target.value)}
+                  className={`${fieldClass} pl-8 pr-2 appearance-none`}
+                >
+                  {TIME_OPTIONS.map((time) => (
+                    <option key={time.value} value={time.value}>
+                      {time.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </label>
           </div>
         </section>
 

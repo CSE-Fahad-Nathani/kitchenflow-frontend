@@ -1,16 +1,6 @@
 import { Loader2, Image as ImageIcon } from "lucide-react";
 import SundayDishCard from "./SundayDishCard";
-
-const formatDetailDate = (value) => {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  return d.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-};
+import { formatDisplayDate } from "../../utils/formatDate";
 
 const SundaySpecialDetailView = ({
   loading,
@@ -44,7 +34,7 @@ const SundaySpecialDetailView = ({
           {special.title || "Sunday Special"}
         </p>
         <p className="text-[15px] font-bold text-gray-900 mt-0.5">
-          {formatDetailDate(special.special_date)}
+          {formatDisplayDate(special.special_date) || "—"}
         </p>
         <p className="text-[12px] text-gray-500 mt-1.5 flex items-center gap-1.5">
           <ImageIcon size={13} />

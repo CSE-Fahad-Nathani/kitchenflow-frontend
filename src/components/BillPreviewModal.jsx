@@ -11,6 +11,7 @@ import {
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { useToastStore } from "../store/toastStore";
+import { formatDisplayDate } from "../utils/formatDate";
 
 const formatMoney = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN")}`;
@@ -19,11 +20,7 @@ const formatDelivery = (datetime) => {
   const delivery = new Date(datetime);
 
   return {
-    date: delivery.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }),
+    date: formatDisplayDate(datetime),
     time: delivery.toLocaleTimeString("en-IN", {
       hour: "numeric",
       minute: "2-digit",

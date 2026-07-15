@@ -1,15 +1,5 @@
 import { CalendarDays, ChevronRight, UtensilsCrossed } from "lucide-react";
-
-const formatCardDate = (value) => {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  return d.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-};
+import { formatDisplayDate } from "../../utils/formatDate";
 
 const SundaySpecialCard = ({ special, onClick }) => {
   const itemCount = Number(special.total_items || 0);
@@ -29,7 +19,7 @@ const SundaySpecialCard = ({ special, onClick }) => {
           {special.title || "Sunday Special"}
         </p>
         <p className="text-[12px] text-gray-500 mt-0.5">
-          {formatCardDate(special.special_date)}
+          {formatDisplayDate(special.special_date) || "—"}
         </p>
         <p className="text-[11px] text-orange-600 font-semibold mt-0.5 flex items-center gap-1">
           <UtensilsCrossed size={11} />

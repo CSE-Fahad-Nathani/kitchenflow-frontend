@@ -13,6 +13,7 @@ import OrderDetailsModal from "../../components/OrderDetailsModal";
 import useOrderStore from "../../store/orderStore";
 import { OrderRowSkeleton, Skeleton } from "../../components/Skeleton";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
+import { formatDisplayDate } from "../../utils/formatDate";
 
 const History = () => {
   const [orders, setOrders] = useState([]);
@@ -184,8 +185,8 @@ const History = () => {
       })
       .sort(
         (a, b) =>
-          new Date(a.delivery_datetime).getTime() -
-          new Date(b.delivery_datetime).getTime()
+          new Date(b.delivery_datetime).getTime() -
+          new Date(a.delivery_datetime).getTime()
       );
   }, [orders, debouncedSearch, filter]);
 
@@ -201,12 +202,7 @@ const History = () => {
     if (delivery.toDateString() === tomorrow.toDateString()) return "Tomorrow";
     if (delivery.toDateString() === yesterday.toDateString()) return "Yesterday";
 
-    return delivery.toLocaleDateString("en-IN", {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
+    return formatDisplayDate(datetime);
   };
 
   const ordersByDate = useMemo(() => {

@@ -49,4 +49,21 @@ export const CustomerRowSkeleton = () => (
   </div>
 );
 
+export const DishRowSkeleton = () => (
+  <div className="bg-white rounded-xl border border-gray-100 px-3 py-2.5 flex items-start justify-between gap-3">
+    <div className="space-y-1.5 flex-1 min-w-0">
+      <Skeleton className="h-3.5 w-32 rounded-md" />
+      <Skeleton className="h-2.5 w-20 rounded-md" />
+      <div className="flex gap-1 pt-0.5">
+        <Skeleton className="h-5 w-16 rounded-md" />
+        <Skeleton className="h-5 w-14 rounded-md" />
+      </div>
+    </div>
+    <div className="flex gap-1.5 shrink-0">
+      <Skeleton className="w-8 h-8 rounded-lg" />
+      <Skeleton className="w-8 h-8 rounded-lg" />
+    </div>
+  </div>
+);
+
 export default Skeleton;

@@ -11,57 +11,28 @@ import {
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { useToastStore } from "../../store/toastStore";
+import {
+  formatDisplayDate,
+  parseLocalDate,
+} from "../../utils/formatDate";
 
 const PHONES = "9637204353/7030734568";
 
 const formatMoney = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN")}`;
 
-const pad2 = (n) => String(n).padStart(2, "0");
-
-const toLocalDate = (value) => {
-  if (!value) return null;
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    const [y, m, d] = value.split("-").map(Number);
-    return new Date(y, m - 1, d);
-  }
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? null : d;
-};
-
-/** DD/MM/YYYY */
-const formatDateSlash = (value) => {
-  const d = toLocalDate(value);
-  if (!d) return "";
-  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
-};
-
-/** DD/MM/YY */
-const formatDateSlashShort = (value) => {
-  const d = toLocalDate(value);
-  if (!d) return "";
-  const yy = String(d.getFullYear()).slice(-2);
-  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${yy}`;
-};
-
 const orderBySaturdayDate = (specialDate) => {
-  const d = toLocalDate(specialDate);
+  const d = parseLocalDate(specialDate);
   if (!d) return null;
   const sat = new Date(d);
   sat.setDate(sat.getDate() - 1);
   return sat;
 };
 
-const orderBySaturdayCopyLabel = (specialDate) => {
+const orderBySaturdayLabel = (specialDate) => {
   const sat = orderBySaturdayDate(specialDate);
   if (!sat) return null;
-  return `Saturday, ${formatDateSlashShort(sat)}`;
-};
-
-const orderBySaturdayPosterLabel = (specialDate) => {
-  const sat = orderBySaturdayDate(specialDate);
-  if (!sat) return null;
-  return `Saturday, ${formatDateSlash(sat)}`;
+  return `Saturday, ${formatDisplayDate(sat)}`;
 };
 
 /** hex-only styles — html2canvas cannot parse Tailwind v4 oklch() colors */
@@ -209,8 +180,8 @@ const s = {
 
 const buildPosterText = (special) => {
   const title = (special.title?.trim() || "Sunday Special").toUpperCase();
-  const dateSlash = formatDateSlash(special.special_date);
-  const saturday = orderBySaturdayCopyLabel(special.special_date);
+  const dateLabel = formatDisplayDate(special.special_date);
+  const saturday = orderBySaturdayLabel(special.special_date);
   const items = special.items || [];
 
   const dishes = items
@@ -230,7 +201,7 @@ const buildPosterText = (special) => {
   return `*__Arefa's Kitchen__*
 
       *${title}*
-   ${dateSlash} (LUNCH)
+   ${dateLabel} (LUNCH)
 
 
 ${dishes}
@@ -253,10 +224,10 @@ const PosterPreviewModal = ({ open, special, onClose }) => {
   if (!open || !special) return null;
 
   const title = special.title?.trim() || "Sunday Special";
-  const dateSlash = formatDateSlash(special.special_date);
-  const saturdayLabel = orderBySaturdayPosterLabel(special.special_date);
+  const dateLabel = formatDisplayDate(special.special_date);
+  const saturdayLabel = orderBySaturdayLabel(special.special_date);
   const fileBase = `Arefas-Kitchen-${title.replace(/\s+/g, "-")}-${
-    dateSlash.replace(/\//g, "-") || "special"
+    dateLabel.replace(/\s+/g, "-") || "special"
   }`;
 
   const capturePoster = async () => {
@@ -383,9 +354,9 @@ const PosterPreviewModal = ({ open, special, onClose }) => {
                 <h1 style={s.title}>Arefa's Kitchen</h1>
                 <p style={s.subtitle}>Homemade Food</p>
                 <p style={s.badge}>{title}</p>
-                {dateSlash && (
+                {dateLabel && (
                   <p style={s.date}>
-                    {dateSlash} (LUNCH)
+                    {dateLabel} (LUNCH)
                   </p>
                 )}
               </div>

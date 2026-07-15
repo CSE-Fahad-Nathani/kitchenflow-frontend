@@ -1,4 +1,5 @@
-import { CalendarDays, Phone, Trash2, CircleCheckBig } from "lucide-react";
+import { CalendarDays, Phone } from "lucide-react";
+import { formatDisplayDate } from "../utils/formatDate";
 
 const OrderCard = ({
     order,
@@ -12,13 +13,9 @@ const OrderCard = ({
     const today = new Date();
     const tomorrow = new Date();
     tomorrow.setDate(today.getDate() + 1);
-    
-    let deliveryDay = deliveryDate.toLocaleDateString([], {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-    
+
+    let deliveryDay = formatDisplayDate(order.delivery_datetime);
+
     if (deliveryDate.toDateString() === today.toDateString()) {
       deliveryDay = "Today";
     } else if (
@@ -26,10 +23,11 @@ const OrderCard = ({
     ) {
       deliveryDay = "Tomorrow";
     }
-    
-    const deliveryTime = deliveryDate.toLocaleTimeString([], {
-      hour: "2-digit",
+
+    const deliveryTime = deliveryDate.toLocaleTimeString("en-IN", {
+      hour: "numeric",
       minute: "2-digit",
+      hour12: true,
     });
 
 
