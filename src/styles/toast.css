@@ -1,36 +1,101 @@
-@keyframes toast-slide {
-    0% {
-      opacity: 0;
-      transform: translate(-50%, -30px) scale(0.96);
-    }
-  
-    60% {
-      opacity: 1;
-      transform: translate(-50%, 6px) scale(1);
-    }
-  
-    100% {
-      opacity: 1;
-      transform: translate(-50%, 0) scale(1);
-    }
+@keyframes toast-dock-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 14px) scale(0.98);
   }
-  
-  .animate-toast {
-    animation: toast-slide 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
   }
-  
-  @keyframes progress {
-    from {
-      width: 100%;
-    }
-  
-    to {
-      width: 0%;
-    }
+}
+
+@keyframes toast-dock-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
   }
-  
-  .animate-progress {
-    animation-name: progress;
-    animation-timing-function: linear;
-    animation-fill-mode: forwards;
+  to {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.98);
   }
+}
+
+@keyframes toast-dialog-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes toast-dialog-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.96);
+  }
+}
+
+@keyframes toast-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes toast-backdrop-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.animate-toast-dock-in {
+  animation: toast-dock-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-toast-dock-out {
+  animation: toast-dock-out 0.24s cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.animate-toast-dialog-in {
+  animation: toast-dialog-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-toast-dialog-out {
+  animation: toast-dialog-out 0.24s cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.animate-toast-backdrop-in {
+  animation: toast-backdrop-in 0.25s ease both;
+}
+
+.animate-toast-backdrop-out {
+  animation: toast-backdrop-out 0.24s ease both;
+}
+
+.animate-toast-progress {
+  transform-origin: left center;
+  animation-name: toast-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}

@@ -1,37 +1,38 @@
-import {
-  CheckCircle2,
-  CircleAlert,
-  CircleX,
-  Info,
-  X,
-} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useToastStore } from "../store/toastStore";
 
-const config = {
+const EXIT_MS = 260;
+
+const ACCENT = {
   success: {
-    icon: CheckCircle2,
-    color: "text-green-600",
-    border: "bg-green-500",
+    ink: "text-green-700",
+    soft: "bg-green-50",
+    line: "bg-green-500",
+    mark: "✓",
   },
   error: {
-    icon: CircleX,
-    color: "text-red-600",
-    border: "bg-red-500",
+    ink: "text-red-600",
+    soft: "bg-red-50",
+    line: "bg-red-500",
+    mark: "!",
   },
   warning: {
-    icon: CircleAlert,
-    color: "text-orange-500",
-    border: "bg-orange-500",
+    ink: "text-orange-600",
+    soft: "bg-orange-50",
+    line: "bg-orange-500",
+    mark: "!",
   },
   info: {
-    icon: Info,
-    color: "text-blue-500",
-    border: "bg-blue-500",
+    ink: "text-orange-600",
+    soft: "bg-orange-50",
+    line: "bg-orange-500",
+    mark: "i",
   },
   confirm: {
-    icon: CircleAlert,
-    color: "text-orange-500",
-    border: "bg-orange-500",
+    ink: "text-orange-600",
+    soft: "bg-orange-50",
+    line: "bg-orange-500",
+    mark: "?",
   },
 };
 
@@ -49,77 +50,185 @@ const Toast = () => {
     hide,
   } = useToastStore();
 
-  if (!visible) return null;
+  const [mounted, setMounted] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const exitTimer = useRef(null);
+  const snapshot = useRef({
+    type: "info",
+    title: "",
+    message: "",
+    duration: 3000,
+    confirmLabel: "Confirm",
+    cancelLabel: "Cancel",
+  });
 
-  const current = config[type] || config.info;
-  const Icon = current.icon;
-  const isConfirm = type === "confirm";
+  useEffect(() => {
+    if (visible) {
+      if (exitTimer.current) {
+        clearTimeout(exitTimer.current);
+        exitTimer.current = null;
+      }
 
-  const handleConfirm = () => {
-    const fn = onConfirm;
+      snapshot.current = {
+        type,
+        title,
+        message,
+        duration,
+        confirmLabel,
+        cancelLabel,
+      };
+      setLeaving(false);
+      setMounted(true);
+      return;
+    }
+
+    if (!mounted) return;
+
+    setLeaving(true);
+    exitTimer.current = setTimeout(() => {
+      setMounted(false);
+      setLeaving(false);
+      exitTimer.current = null;
+    }, EXIT_MS);
+
+    return () => {
+      if (exitTimer.current) {
+        clearTimeout(exitTimer.current);
+        exitTimer.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  if (!mounted) return null;
+
+  const view = leaving
+    ? snapshot.current
+    : { type, title, message, duration, confirmLabel, cancelLabel };
+
+  const accent = ACCENT[view.type] || ACCENT.info;
+  const isConfirm = view.type === "confirm";
+
+  const finishHide = (fn) => {
     hide();
-    if (typeof fn === "function") fn();
+    if (typeof fn === "function") {
+      window.setTimeout(fn, 40);
+    }
   };
 
-  const handleCancel = () => {
-    const fn = onCancel;
-    hide();
-    if (typeof fn === "function") fn();
-  };
+  if (isConfirm) {
+    return (
+      <>
+        <div
+          className={`fixed inset-0 z-[99998] bg-[#1a120b]/45 ${
+            leaving
+              ? "animate-toast-backdrop-out"
+              : "animate-toast-backdrop-in"
+          }`}
+          onClick={() => finishHide(onCancel)}
+          aria-hidden
+        />
+
+        <div
+          className={`fixed left-1/2 top-1/2 z-[99999] w-[min(92vw,22rem)] ${
+            leaving ? "animate-toast-dialog-out" : "animate-toast-dialog-in"
+          }`}
+          role="alertdialog"
+          aria-modal="true"
+        >
+          <div className="rounded-[1.25rem] bg-[#fffaf6] border border-orange-200/80 overflow-hidden shadow-[0_20px_50px_rgba(26,18,11,0.28)]">
+            <div className="px-5 pt-5 pb-2 text-center">
+              <div
+                className={`mx-auto mb-3 w-10 h-10 rounded-2xl ${accent.soft} ${accent.ink} flex items-center justify-center text-[1.15rem] font-black`}
+              >
+                {accent.mark}
+              </div>
+              <h3 className="text-[1.05rem] font-bold text-[#1a120b] tracking-tight leading-snug">
+                {view.title}
+              </h3>
+              {view.message && (
+                <p className="mt-1.5 text-[13px] text-[#6b5e54] leading-relaxed">
+                  {view.message}
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 border-t border-orange-100/90 mt-3">
+              <button
+                type="button"
+                onClick={() => finishHide(onCancel)}
+                className="press-scale h-12 text-[13.5px] font-semibold text-[#6b5e54] active:bg-orange-50/60 border-r border-orange-100/90"
+              >
+                {view.cancelLabel}
+              </button>
+              <button
+                type="button"
+                onClick={() => finishHide(onConfirm)}
+                className="press-scale h-12 text-[13.5px] font-bold text-orange-600 active:bg-orange-50"
+              >
+                {view.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
-    <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[99999] w-[92%] max-w-sm animate-toast">
-      <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white/95 backdrop-blur-xl shadow-2xl">
-        <div className={`absolute left-0 top-0 h-full w-1 ${current.border}`} />
-
-        <div className="flex items-start gap-3 p-4">
-          <Icon size={24} className={`mt-0.5 shrink-0 ${current.color}`} />
-
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900">{title}</h3>
-
-            {message && (
-              <p className="mt-1 text-sm text-gray-500">{message}</p>
-            )}
-
-            {isConfirm && (
-              <div className="mt-3.5 flex gap-2">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="press-scale flex-1 h-10 rounded-xl border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-700 active:bg-gray-100"
-                >
-                  {cancelLabel}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirm}
-                  className="press-scale flex-1 h-10 rounded-xl text-sm font-semibold text-white bg-gradient-to-br from-orange-500 to-orange-600 shadow-md shadow-orange-500/25"
-                >
-                  {confirmLabel}
-                </button>
-              </div>
-            )}
+    <div
+      className={`fixed bottom-20 left-1/2 z-[99999] w-[min(92vw,22rem)] ${
+        leaving ? "animate-toast-dock-out" : "animate-toast-dock-in"
+      }`}
+      role="status"
+    >
+      <div className="relative overflow-hidden rounded-2xl bg-[#1a120b] text-[#fffaf6] shadow-[0_12px_32px_rgba(26,18,11,0.35)]">
+        <div className="px-3.5 py-2.5 flex items-start gap-2.5">
+          <div
+            className={`shrink-0 mt-0.5 w-7 h-7 rounded-lg ${accent.soft} ${accent.ink} flex items-center justify-center text-[12px] font-black`}
+            aria-hidden
+          >
+            {accent.mark}
           </div>
 
-          {!isConfirm && (
-            <button
-              type="button"
-              onClick={hide}
-              className="text-gray-400 hover:text-gray-700 shrink-0"
-            >
-              <X size={18} />
-            </button>
-          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className={`text-[10px] font-bold uppercase tracking-[0.12em] ${accent.ink}`}>
+                  {view.type === "success"
+                    ? "Success"
+                    : view.type === "error"
+                      ? "Error"
+                      : view.type === "warning"
+                        ? "Warning"
+                        : "Info"}
+                </p>
+                <p className="text-[13.5px] font-semibold leading-tight mt-0.5 truncate text-white">
+                  {view.title}
+                </p>
+                {view.message && (
+                  <p className="mt-0.5 text-[12px] text-white/65 leading-snug line-clamp-2">
+                    {view.message}
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={hide}
+                className="press-scale shrink-0 text-[11px] font-semibold text-white/45 hover:text-white/80 pt-0.5"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
 
-        {!isConfirm && (
+        {!leaving && (
           <div
-            key={`${title}-${message}-${duration}`}
-            className={`h-1 ${current.border} animate-progress`}
-            style={{
-              animationDuration: `${duration}ms`,
-            }}
+            key={`${view.title}-${view.message}-${view.duration}`}
+            className={`h-[2px] w-full ${accent.line} animate-toast-progress`}
+            style={{ animationDuration: `${view.duration}ms` }}
           />
         )}
       </div>

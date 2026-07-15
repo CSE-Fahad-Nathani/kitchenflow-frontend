@@ -1,28 +1,29 @@
 import { Pencil, Trash2 } from "lucide-react";
 
 const DishCard = ({ dish, onEdit, onDelete }) => {
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 px-3 py-2.5 flex items-start justify-between gap-3">
-      <div className="min-w-0 flex-1">
-        <p className="text-[13.5px] font-semibold text-gray-900 truncate">
-          {dish.dish_name}
-        </p>
-        <p className="text-[12px] text-gray-500 mt-0.5 truncate">
-          {dish.category || "Uncategorized"}
-        </p>
+  const variantText =
+    dish.variants?.length > 0
+      ? dish.variants
+          .map((v) => `${v.variant_name} ₹${v.price}`)
+          .join(" · ")
+      : "No variants";
 
-        {dish.variants?.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            {dish.variants.map((variant) => (
-              <span
-                key={variant.variant_id}
-                className="text-[10.5px] font-semibold text-orange-600 bg-orange-50 border border-orange-100 px-1.5 py-0.5 rounded-md"
-              >
-                {variant.variant_name} · ₹{variant.price}
-              </span>
-            ))}
-          </div>
-        )}
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 px-3 py-2 flex items-center gap-2.5">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-1.5 min-w-0">
+          <h2 className="font-semibold text-[13.5px] text-gray-900 truncate leading-tight">
+            {dish.dish_name}
+          </h2>
+          {dish.category && (
+            <span className="text-[11px] text-gray-400 shrink-0">
+              {dish.category}
+            </span>
+          )}
+        </div>
+        <p className="text-[11.5px] text-gray-500 mt-0.5 truncate">
+          {variantText}
+        </p>
       </div>
 
       <div className="flex gap-1.5 shrink-0">

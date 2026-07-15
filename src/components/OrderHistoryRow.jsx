@@ -15,14 +15,14 @@ const OrderHistoryRow = ({
   });
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.03)] px-3 py-2.5 flex items-center gap-2.5">
+    <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.03)] px-3 py-2.5 flex items-center gap-2">
       <button
         type="button"
         onClick={onClick}
         className="press-scale flex-1 min-w-0 text-left active:opacity-70"
       >
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-[13.5px] text-gray-900 truncate leading-tight">
               {order.customer_name?.trim() || `Order #${order.order_number}`}
             </h3>
@@ -33,19 +33,17 @@ const OrderHistoryRow = ({
             </p>
           </div>
 
-          <div className="text-right shrink-0">
-            <p className="font-bold text-[13.5px] text-orange-500 leading-tight">
+          <div className="text-right shrink-0 pl-1">
+            <p className="font-bold text-[13.5px] text-orange-500 leading-tight whitespace-nowrap">
               ₹{Number(order.total_amount).toLocaleString("en-IN")}
             </p>
-            <span
-              className={`inline-block mt-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
-                order.is_paid
-                  ? "text-emerald-700 bg-emerald-50"
-                  : "text-amber-700 bg-amber-50"
+            <p
+              className={`text-[11px] font-semibold mt-0.5 leading-tight ${
+                order.is_paid ? "text-green-600" : "text-red-600"
               }`}
             >
               {order.is_paid ? "Paid" : "Unpaid"}
-            </span>
+            </p>
           </div>
         </div>
       </button>
@@ -59,14 +57,15 @@ const OrderHistoryRow = ({
             onMarkPaid?.(order.order_id);
           }}
           aria-label="Mark paid"
-          className="press-scale shrink-0 h-8 px-2.5 rounded-lg font-semibold text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 flex items-center justify-center gap-1 active:bg-emerald-100 disabled:opacity-60"
+          title="Mark Paid"
+          className="press-scale shrink-0 h-9 px-2.5 rounded-lg font-semibold text-[11px] text-green-700 bg-green-50 border border-green-200 flex items-center justify-center gap-1 active:bg-green-100 disabled:opacity-60 whitespace-nowrap"
         >
           {markingPaid ? (
             <Loader2 size={13} className="animate-spin" />
           ) : (
             <>
               <Check size={13} strokeWidth={2.5} />
-              Paid
+              Mark Paid
             </>
           )}
         </button>

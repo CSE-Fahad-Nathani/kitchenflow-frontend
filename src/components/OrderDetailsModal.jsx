@@ -39,19 +39,17 @@ const OrderDetailsModal = ({
           <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-3" />
 
           <div className="flex justify-between items-center gap-3">
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="min-w-0">
               <h2 className="text-[15px] font-bold text-gray-900 truncate">
                 #{order.order_number}
               </h2>
-              <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                  order.is_paid
-                    ? "text-emerald-700 bg-emerald-50 border border-emerald-100"
-                    : "text-amber-700 bg-amber-50 border border-amber-100"
+              <p
+                className={`text-[12px] font-semibold mt-0.5 ${
+                  order.is_paid ? "text-green-600" : "text-red-600"
                 }`}
               >
                 {order.is_paid ? "Paid" : "Unpaid"}
-              </span>
+              </p>
             </div>
 
             <button
@@ -222,7 +220,7 @@ const OrderDetailsModal = ({
                 className="press-scale h-10 rounded-xl text-[12.5px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 flex items-center justify-center gap-1 active:bg-emerald-100 transition-colors"
               >
                 <Check size={14} strokeWidth={2.5} />
-                Paid
+                Mark Paid
               </button>
             ) : (
               <button

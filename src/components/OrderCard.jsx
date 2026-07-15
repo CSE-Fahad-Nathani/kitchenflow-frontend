@@ -131,22 +131,18 @@ const OrderCard = ({
       <div className="my-5 border-t" />
 
       <div className="flex justify-between items-center">
-
         <span
-          className={`text-sm font-semibold px-3 py-1 rounded-full ${
-            order.is_paid
-              ? "bg-green-100 text-green-600"
-              : "bg-orange-100 text-orange-600"
+          className={`text-sm font-semibold ${
+            order.is_paid ? "text-green-600" : "text-red-600"
           }`}
         >
-          {order.is_paid ? "PAID" : "UNPAID"}
+          {order.is_paid ? "Paid" : "Unpaid"}
         </span>
 
         <span className="text-xs text-gray-500">
           Reminder: {order.reminder_count}
         </span>
-
-        </div>
+      </div>
 
         <div className="mt-5 flex justify-between text-sm">
 

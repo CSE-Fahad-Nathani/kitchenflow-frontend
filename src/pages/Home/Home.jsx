@@ -14,6 +14,7 @@ import {
   fetchTodaysOrders,
 } from "../../api/dashboardApi";
 import OrderDetailsModal from "../../components/OrderDetailsModal";
+import BillPreviewModal from "../../components/BillPreviewModal";
 import {
   markOrderPaid,
   increaseReminder,
@@ -23,6 +24,7 @@ import {
   MenuRowSkeleton,
   StatCardSkeleton,
 } from "../../components/Skeleton";
+import { useToastStore } from "../../store/toastStore";
 
 const menus = [
   {
@@ -60,6 +62,7 @@ const menus = [
 const Home = () => {
   const navigate = useNavigate();
   const { loadOrder } = useOrderStore();
+  const toast = useToastStore();
 
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -71,6 +74,7 @@ const Home = () => {
   const [showRevenueModal, setShowRevenueModal] = useState(false);
   const [todayOrders, setTodayOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [reminderBill, setReminderBill] = useState(null);
 
   useEffect(() => {
     const loadHome = async () => {
@@ -126,28 +130,46 @@ const Home = () => {
   const handleReminder = async (order_id) => {
     try {
       const response = await increaseReminder(order_id);
+      const reminder_count = response.data.reminder_count;
+
+      const baseOrder =
+        (selectedOrder?.order_id === order_id ? selectedOrder : null) ||
+        todayOrders.find((order) => order.order_id === order_id);
 
       setTodayOrders((prev) =>
         prev.map((order) =>
           order.order_id === order_id
             ? {
                 ...order,
-                reminder_count: response.data.reminder_count,
+                reminder_count,
               }
             : order
         )
       );
 
       setSelectedOrder((prev) =>
-        prev
+        prev?.order_id === order_id
           ? {
               ...prev,
-              reminder_count: response.data.reminder_count,
+              reminder_count,
             }
-          : null
+          : prev
+      );
+
+      if (baseOrder) {
+        setReminderBill({
+          ...baseOrder,
+          reminder_count,
+        });
+      }
+
+      toast.success(
+        "Reminder ready",
+        `Reminder #${reminder_count} — download or copy to send.`
       );
     } catch (error) {
       console.error(error);
+      toast.error("Failed", "Unable to update reminder.");
     }
   };
 
@@ -366,15 +388,13 @@ const Home = () => {
                         <p className="font-bold text-orange-500 text-[15px]">
                           ₹{Number(order.total_amount).toLocaleString("en-IN")}
                         </p>
-                        <span
-                          className={`inline-block mt-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full ${
-                            order.is_paid
-                              ? "text-green-700 bg-green-50 border border-green-100"
-                              : "text-red-600 bg-red-50 border border-red-100"
+                        <p
+                          className={`mt-0.5 text-[12px] font-semibold ${
+                            order.is_paid ? "text-green-600" : "text-red-600"
                           }`}
                         >
                           {order.is_paid ? "Paid" : "Unpaid"}
-                        </span>
+                        </p>
                       </div>
                     </div>
 
@@ -413,6 +433,13 @@ const Home = () => {
         onReminder={handleReminder}
         onEdit={handleEdit}
         showDelete={false}
+      />
+
+      <BillPreviewModal
+        open={!!reminderBill}
+        order={reminderBill}
+        variant="reminder"
+        onClose={() => setReminderBill(null)}
       />
     </div>
   );

@@ -140,9 +140,30 @@ const s = {
     color: "#9ca3af",
     lineHeight: 1.6,
   },
+  reminderBanner: {
+    margin: "0 0 10px",
+    padding: "8px 10px",
+    backgroundColor: "#fff7ed",
+    border: "1px solid #fed7aa",
+    borderRadius: "8px",
+    textAlign: "center",
+    fontSize: "14px",
+    fontWeight: 800,
+    color: "#ea580c",
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+  },
+  paidNote: {
+    margin: "10px 0 0",
+    textAlign: "center",
+    fontSize: "12px",
+    fontWeight: 700,
+    color: "#111827",
+    lineHeight: 1.45,
+  },
 };
 
-const BillPreviewModal = ({ open, order, onClose }) => {
+const BillPreviewModal = ({ open, order, onClose, variant = "bill" }) => {
   const toast = useToastStore();
   const billRef = useRef(null);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
@@ -150,11 +171,16 @@ const BillPreviewModal = ({ open, order, onClose }) => {
 
   if (!open || !order) return null;
 
+  const isReminder = variant === "reminder";
+  const reminderCount = Number(order.reminder_count || 0);
+
   const { date: deliveryDate, time: deliveryTime } = formatDelivery(
     order.delivery_datetime
   );
 
-  const fileBase = `Arefas-Kitchen-Bill-${order.order_number || "order"}`;
+  const fileBase = isReminder
+    ? `Arefas-Kitchen-Reminder-${order.order_number || "order"}-${reminderCount}`
+    : `Arefas-Kitchen-Bill-${order.order_number || "order"}`;
 
   const captureBill = async () => {
     const node = billRef.current;
@@ -205,7 +231,10 @@ const BillPreviewModal = ({ open, order, onClose }) => {
         }, "image/png");
       });
 
-      toast.success("Downloaded", "Bill saved as image.");
+      toast.success(
+        "Downloaded",
+        isReminder ? "Reminder saved as image." : "Bill saved as image."
+      );
     } catch (error) {
       console.error(error);
       toast.error("Failed", "Unable to download image.");
@@ -237,7 +266,10 @@ const BillPreviewModal = ({ open, order, onClose }) => {
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
       pdf.save(`${fileBase}.pdf`);
 
-      toast.success("Downloaded", "Bill saved as PDF.");
+      toast.success(
+        "Downloaded",
+        isReminder ? "Reminder saved as PDF." : "Bill saved as PDF."
+      );
     } catch (error) {
       console.error(error);
       toast.error("Failed", "Unable to download PDF.");
@@ -259,11 +291,21 @@ const BillPreviewModal = ({ open, order, onClose }) => {
       customerLine = `${customerMobile}\n`;
     }
 
-    const billText = `*Arefa's Kitchen*
+    const reminderHeader = isReminder
+      ? `*REMINDER #${reminderCount}*\n\n`
+      : "";
+
+    const paidNote = isReminder
+      ? `
+
+If paid please share screenshot`
+      : "";
+
+    const billText = `${reminderHeader}*Arefa's Kitchen*
 
 ${customerLine}Delivery: ${deliveryDate} (${deliveryTime})
 --------------------------------
-${order.items
+${(order.items || [])
   .map(
     (item) =>
       `${item.dish_name}${
@@ -279,11 +321,16 @@ Discount = *-₹${Number(order.discount).toLocaleString("en-IN")}/-*`
         : ""
     }
 
-*Total = ₹${Number(order.total_amount).toLocaleString("en-IN")}/-*`;
+*Total = ₹${Number(order.total_amount).toLocaleString("en-IN")}/-*${paidNote}`;
 
     try {
       await navigator.clipboard.writeText(billText);
-      toast.success("Copied", "Bill text copied successfully.");
+      toast.success(
+        "Copied",
+        isReminder
+          ? "Reminder text copied successfully."
+          : "Bill text copied successfully."
+      );
     } catch (error) {
       console.error(error);
       toast.error("Failed", "Unable to copy bill.");
@@ -292,7 +339,7 @@ Discount = *-₹${Number(order.discount).toLocaleString("en-IN")}/-*`
 
   return (
     <div
-      className="fixed inset-0 z-[9999] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-[10000] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
     >
       <div
@@ -300,7 +347,9 @@ Discount = *-₹${Number(order.discount).toLocaleString("en-IN")}/-*`
         className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[92dvh] overflow-hidden animate-slide-up flex flex-col"
       >
         <div className="shrink-0 flex justify-between items-center border-b px-5 py-4">
-          <h2 className="font-bold text-xl">Bill Preview</h2>
+          <h2 className="font-bold text-xl">
+            {isReminder ? "Reminder Preview" : "Bill Preview"}
+          </h2>
           <button type="button" onClick={onClose} aria-label="Close">
             <X />
           </button>
@@ -311,9 +360,16 @@ Discount = *-₹${Number(order.discount).toLocaleString("en-IN")}/-*`
           <div ref={billRef} style={s.bill}>
             <div style={s.inner}>
               <div style={s.center}>
+                {isReminder && (
+                  <p style={s.reminderBanner}>
+                    Reminder #{reminderCount}
+                  </p>
+                )}
                 <h1 style={s.title}>Arefa's Kitchen</h1>
                 <p style={s.subtitle}>Homemade Food</p>
-                <p style={s.badge}>Tax Invoice / Bill</p>
+                <p style={s.badge}>
+                  {isReminder ? "Payment Reminder" : "Tax Invoice / Bill"}
+                </p>
               </div>
 
               <div style={s.divider} />
@@ -352,7 +408,7 @@ Discount = *-₹${Number(order.discount).toLocaleString("en-IN")}/-*`
                 <span>Amount</span>
               </div>
 
-              {order.items.map((item, idx) => (
+              {(order.items || []).map((item, idx) => (
                 <div
                   key={item.order_item_id || `${item.dish_name}-${idx}`}
                   style={s.itemRow}
@@ -413,6 +469,10 @@ Discount = *-₹${Number(order.discount).toLocaleString("en-IN")}/-*`
                 <br />
                 Homemade with care · Arefa's Kitchen
               </p>
+
+              {isReminder && (
+                <p style={s.paidNote}>If paid please share screenshot</p>
+              )}
             </div>
           </div>
         </div>

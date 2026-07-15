@@ -14,6 +14,7 @@ import useOrderStore from "../../store/orderStore";
 import { OrderRowSkeleton, Skeleton } from "../../components/Skeleton";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { formatDisplayDate } from "../../utils/formatDate";
+import BillPreviewModal from "../../components/BillPreviewModal";
 
 const History = () => {
   const [orders, setOrders] = useState([]);
@@ -24,6 +25,7 @@ const History = () => {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [reminderBill, setReminderBill] = useState(null);
 
   const debouncedSearch = useDebouncedValue(search, 300);
 
@@ -131,13 +133,18 @@ const History = () => {
   const handleReminder = async (order_id) => {
     try {
       const response = await increaseReminder(order_id);
+      const reminder_count = response.data.reminder_count;
+
+      const baseOrder =
+        (selectedOrder?.order_id === order_id ? selectedOrder : null) ||
+        orders.find((order) => order.order_id === order_id);
 
       setOrders((prev) =>
         prev.map((order) =>
           order.order_id === order_id
             ? {
                 ...order,
-                reminder_count: response.data.reminder_count,
+                reminder_count,
               }
             : order
         )
@@ -147,14 +154,21 @@ const History = () => {
         prev?.order_id === order_id
           ? {
               ...prev,
-              reminder_count: response.data.reminder_count,
+              reminder_count,
             }
           : prev
       );
 
+      if (baseOrder) {
+        setReminderBill({
+          ...baseOrder,
+          reminder_count,
+        });
+      }
+
       toast.success(
-        "Reminder Updated",
-        `Reminder Count: ${response.data.reminder_count}`
+        "Reminder ready",
+        `Reminder #${reminder_count} — download or copy to send.`
       );
     } catch (error) {
       console.error(error);
@@ -382,6 +396,13 @@ const History = () => {
           handleEdit(order);
         }}
         onDelete={handleDelete}
+      />
+
+      <BillPreviewModal
+        open={!!reminderBill}
+        order={reminderBill}
+        variant="reminder"
+        onClose={() => setReminderBill(null)}
       />
     </div>
   );
