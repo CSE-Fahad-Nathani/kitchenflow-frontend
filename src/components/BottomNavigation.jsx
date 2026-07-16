@@ -2,7 +2,7 @@ import {
     House,
     ShoppingCart,
     History,
-    Ellipsis,
+    ChartColumn,
   } from "lucide-react";
   import { NavLink } from "react-router-dom";
   
@@ -23,9 +23,9 @@ import {
       icon: History,
     },
     {
-      label: "More",
-      path: "/settings",
-      icon: Ellipsis,
+      label: "Analysis",
+      path: "/analysis",
+      icon: ChartColumn,
     },
   ];
   

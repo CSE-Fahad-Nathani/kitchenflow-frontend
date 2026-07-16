@@ -1,18 +1,26 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Minus, Plus, Trash2 } from "lucide-react";
+import { Loader2, Minus, Plus, Trash2, UtensilsCrossed } from "lucide-react";
 import { searchDishes } from "../api/dishApi";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 
 const inputClass =
   "w-full h-8 bg-gray-50 border border-gray-200 rounded-lg px-2 text-[12.5px] outline-none focus:border-orange-400 focus:bg-white focus:ring-2 focus:ring-orange-100 transition-all";
 
-const OrderItemCard = ({ item, index, onChange, onDelete }) => {
+const OrderItemCard = ({
+  item,
+  index,
+  onChange,
+  onDelete,
+  onAddDishNow,
+  addingDish = false,
+}) => {
   const [suggestions, setSuggestions] = useState([]);
   const [searching, setSearching] = useState(false);
   const lastSelectedRef = useRef("");
   const requestIdRef = useRef(0);
 
   const debouncedDishName = useDebouncedValue(item.dish_name, 350);
+  const isNewDishCandidate = Boolean(item.dish_name?.trim() && !item.dish_id);
 
   useEffect(() => {
     if (!debouncedDishName.trim()) {
@@ -58,6 +66,13 @@ const OrderItemCard = ({ item, index, onChange, onDelete }) => {
       ...item,
       [field]: value,
     };
+
+    if (field === "dish_name") {
+      updated.dish_id = null;
+      updated.variant_id = null;
+      updated.variants = [];
+      updated.saveNewDish = true;
+    }
 
     if (field === "quantity" || field === "unit_price") {
       updated.total = Number(updated.quantity) * Number(updated.unit_price);
@@ -124,6 +139,7 @@ const OrderItemCard = ({ item, index, onChange, onDelete }) => {
                       unit_price: 0,
                       total: 0,
                       variants: dish.variants,
+                      saveNewDish: false,
                     });
                     setSuggestions([]);
                   }}
@@ -271,6 +287,49 @@ const OrderItemCard = ({ item, index, onChange, onDelete }) => {
           />
         </div>
       </div>
+
+      {isNewDishCandidate && (
+        <div className="rounded-lg border border-orange-100 bg-orange-50/70 p-2 space-y-1.5">
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={item.saveNewDish !== false}
+              onChange={(e) =>
+                onChange(index, {
+                  ...item,
+                  saveNewDish: e.target.checked,
+                })
+              }
+              className="mt-0.5 accent-orange-500"
+            />
+            <span className="text-[11.5px] font-medium text-gray-700 leading-snug">
+              Save as new dish when creating bill
+              <span className="block text-[10.5px] font-normal text-gray-500">
+                Needs variant + price
+              </span>
+            </span>
+          </label>
+
+          <button
+            type="button"
+            disabled={addingDish}
+            onClick={() => onAddDishNow?.(index)}
+            className="press-scale w-full h-8 rounded-lg text-[11.5px] font-semibold text-orange-700 bg-white border border-orange-200 flex items-center justify-center gap-1 active:bg-orange-50 disabled:opacity-60"
+          >
+            {addingDish ? (
+              <>
+                <Loader2 size={13} className="animate-spin" />
+                Adding…
+              </>
+            ) : (
+              <>
+                <UtensilsCrossed size={13} />
+                Add dish now
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

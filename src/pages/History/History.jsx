@@ -178,7 +178,7 @@ const History = () => {
 
   const handleEdit = (order) => {
     loadOrder(order);
-    navigate("/orders");
+    navigate("/orders/standard");
   };
 
   const filteredOrders = useMemo(() => {

@@ -16,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 import { useToastStore } from "../../store/toastStore";
 import { addOrder, updateOrder } from "../../api/orderApi";
 import { addCustomer } from "../../api/customerApi";
+import { addDish } from "../../api/dishApi";
 import BillPreviewModal from "../../components/BillPreviewModal";
 import DateInput from "../../components/DateInput";
 
@@ -71,6 +72,7 @@ const Orders = () => {
   const [returnToHistory, setReturnToHistory] = useState(false);
   const [saveNewCustomer, setSaveNewCustomer] = useState(true);
   const [addingCustomer, setAddingCustomer] = useState(false);
+  const [addingDishIndex, setAddingDishIndex] = useState(null);
   const scrollRef = useRef(null);
 
   const {
@@ -115,6 +117,59 @@ const Orders = () => {
     return response.data;
   };
 
+  const buildDishPayloadFromItem = (item) => {
+    const dishName = item.dish_name?.trim();
+    const variantName = item.variant_name?.trim() || "Regular";
+    const price = Number(item.unit_price) || Number(item.total) || 0;
+
+    if (!dishName) {
+      throw new Error("Dish name is required");
+    }
+
+    if (price <= 0) {
+      throw new Error("Add a price before saving this dish");
+    }
+
+    return {
+      dish_name: dishName,
+      category: "",
+      variants: [
+        {
+          variant_name: variantName,
+          price,
+        },
+      ],
+    };
+  };
+
+  const applyCreatedDishToItem = (item, created) => {
+    const matchedVariant =
+      created.variants?.find(
+        (v) =>
+          v.variant_name?.toLowerCase() ===
+          (item.variant_name?.trim() || "Regular").toLowerCase()
+      ) || created.variants?.[0];
+
+    return {
+      ...item,
+      dish_id: created.dish_id,
+      dish_name: created.dish_name || item.dish_name,
+      variant_id: matchedVariant?.variant_id || null,
+      variant_name: matchedVariant?.variant_name || item.variant_name || "Regular",
+      unit_price: Number(matchedVariant?.price ?? item.unit_price),
+      total:
+        Number(matchedVariant?.price ?? item.unit_price) *
+        Number(item.quantity || 1),
+      variants: created.variants || [],
+      saveNewDish: false,
+    };
+  };
+
+  const createDishFromItem = async (item) => {
+    const response = await addDish(buildDishPayloadFromItem(item));
+    return response.data;
+  };
+
   const handleAddCustomerNow = async () => {
     if (!customer.trim() || addingCustomer) return;
 
@@ -137,6 +192,30 @@ const Orders = () => {
       );
     } finally {
       setAddingCustomer(false);
+    }
+  };
+
+  const handleAddDishNow = async (index) => {
+    const item = items[index];
+    if (!item || addingDishIndex !== null) return;
+
+    try {
+      setAddingDishIndex(index);
+      const created = await createDishFromItem(item);
+      const nextItems = [...items];
+      nextItems[index] = applyCreatedDishToItem(item, created);
+      setItems(nextItems);
+      toast.success("Dish added", "Dish and variant saved.");
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        "Failed",
+        error?.message ||
+          error?.response?.data?.message ||
+          "Unable to add dish."
+      );
+    } finally {
+      setAddingDishIndex(null);
     }
   };
 
@@ -182,6 +261,8 @@ const Orders = () => {
       setSubmitting(true);
 
       let resolvedCustomerId = customer_id || null;
+      let resolvedItems = items.map((item) => ({ ...item }));
+      let dishesCreated = false;
 
       if (
         saveNewCustomer &&
@@ -203,6 +284,31 @@ const Orders = () => {
         }
       }
 
+      for (let i = 0; i < resolvedItems.length; i++) {
+        const item = resolvedItems[i];
+        if (item.dish_id || item.saveNewDish === false) continue;
+        if (!item.dish_name?.trim()) continue;
+
+        try {
+          const created = await createDishFromItem(item);
+          resolvedItems[i] = applyCreatedDishToItem(item, created);
+          dishesCreated = true;
+        } catch (error) {
+          console.error(error);
+          toast.error(
+            "Dish not saved",
+            error?.message ||
+              error?.response?.data?.message ||
+              `Could not add dish "${item.dish_name}". Order was not created.`
+          );
+          return;
+        }
+      }
+
+      if (dishesCreated) {
+        setItems(resolvedItems);
+      }
+
       const payload = {
         customer_id: resolvedCustomerId,
         customer_name: customer.trim() || null,
@@ -213,7 +319,7 @@ const Orders = () => {
         other_charges: 0,
         total_amount: Number(grandTotal),
         bill_notes: "",
-        items: items.map((item) => ({
+        items: resolvedItems.map((item) => ({
           dish_id: item.dish_id,
           variant_id: item.variant_id,
           dish_name: item.dish_name,
@@ -432,6 +538,8 @@ const Orders = () => {
                     index={index}
                     onChange={handleItemChange}
                     onDelete={handleDeleteItem}
+                    onAddDishNow={handleAddDishNow}
+                    addingDish={addingDishIndex === index}
                   />
                 ))}
               </div>

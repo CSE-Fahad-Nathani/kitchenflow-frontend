@@ -53,4 +53,11 @@ export const formatDisplayDate = (value) => {
   return `${getOrdinalDay(d.getDate())} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 };
 
+/** e.g. 1 Jan 2026 */
+export const formatShortDate = (value) => {
+  const d = parseLocalDate(value);
+  if (!d) return value ? String(value) : "";
+  return `${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)} ${d.getFullYear()}`;
+};
+
 export default formatDisplayDate;

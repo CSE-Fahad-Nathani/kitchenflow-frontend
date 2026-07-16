@@ -4,7 +4,7 @@ import {
   UtensilsCrossed,
   History,
   Star,
-  Settings,
+  ChartColumn,
   ChevronRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -52,10 +52,10 @@ const menus = [
     path: "/sunday-menu",
   },
   {
-    title: "Settings",
-    subtitle: "Restaurant Settings",
-    icon: Settings,
-    path: "/settings",
+    title: "Analysis",
+    subtitle: "Monthly revenue & insights",
+    icon: ChartColumn,
+    path: "/analysis",
   },
 ];
 

@@ -5,10 +5,14 @@ export const fetchDashboardStatistics = async () => {
   return response.data.data;
 };
 
-export const fetchTodaysOrders = async () => {
-  const response = await api.get(
-    "/orders/fetch-todays-orders"
-  );
+export const fetchMonthlyStatistics = async (month, year) => {
+  const response = await api.get("/dashboard/monthly", {
+    params: { month, year },
+  });
+  return response.data.data;
+};
 
+export const fetchTodaysOrders = async () => {
+  const response = await api.get("/orders/fetch-todays-orders");
   return response.data.data;
 };

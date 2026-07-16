@@ -118,6 +118,7 @@ const useOrderStore = create((set) => ({
             total: 0,
 
             variants: [],
+            saveNewDish: true,
           },
         ],
       };
@@ -165,6 +166,7 @@ const useOrderStore = create((set) => ({
           unit_price: item.unit_price,
           total: item.total_price,
           variants: [],
+          saveNewDish: false,
         })),
     
         grandTotal: Number(order.total_amount),
