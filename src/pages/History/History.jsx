@@ -13,7 +13,7 @@ import OrderDetailsModal from "../../components/OrderDetailsModal";
 import useOrderStore from "../../store/orderStore";
 import { OrderRowSkeleton, Skeleton } from "../../components/Skeleton";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
-import { formatDisplayDate } from "../../utils/formatDate";
+import { formatDisplayDate, parseLocalDateTime } from "../../utils/formatDate";
 import BillPreviewModal from "../../components/BillPreviewModal";
 
 const History = () => {
@@ -197,15 +197,17 @@ const History = () => {
         if (filter === "unpaid") return !order.is_paid;
         return true;
       })
-      .sort(
-        (a, b) =>
-          new Date(b.delivery_datetime).getTime() -
-          new Date(a.delivery_datetime).getTime()
-      );
+      .sort((a, b) => {
+        const ta = parseLocalDateTime(a.delivery_datetime)?.getTime() || 0;
+        const tb = parseLocalDateTime(b.delivery_datetime)?.getTime() || 0;
+        return tb - ta;
+      });
   }, [orders, debouncedSearch, filter]);
 
   const formatDayLabel = (datetime) => {
-    const delivery = new Date(datetime);
+    const delivery = parseLocalDateTime(datetime);
+    if (!delivery) return formatDisplayDate(datetime);
+
     const today = new Date();
     const tomorrow = new Date();
     tomorrow.setDate(today.getDate() + 1);
@@ -223,7 +225,8 @@ const History = () => {
     const groups = [];
 
     filteredOrders.forEach((order) => {
-      const key = new Date(order.delivery_datetime).toDateString();
+      const delivery = parseLocalDateTime(order.delivery_datetime);
+      const key = delivery?.toDateString() || String(order.delivery_datetime);
       const last = groups[groups.length - 1];
 
       if (last && last.key === key) {

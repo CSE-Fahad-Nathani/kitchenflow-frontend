@@ -13,22 +13,57 @@ const MONTHS = [
   "December",
 ];
 
-/** Parse date / datetime without UTC day-shift for YYYY-MM-DD. */
-export const parseLocalDate = (value) => {
-  if (!value) return null;
+/**
+ * KitchenFlow datetimes are wall-clock strings (no real timezone).
+ * Never use `new Date(isoWithZ)` for display — that follows device TZ.
+ *
+ * Accepts:
+ * - "2026-07-17T11:00:00"
+ * - "2026-07-17 11:00:00"
+ * - "2026-07-17T05:30:00.000Z" (legacy broken JSON — still use digits)
+ * - "2026-07-17"
+ */
+const LOCAL_DATETIME_RE =
+  /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?)?(?:Z)?$/i;
 
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : value;
+export const extractLocalDateTimeParts = (value) => {
+  if (value == null || value === "") return null;
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return {
+      year: value.getFullYear(),
+      month: value.getMonth() + 1,
+      day: value.getDate(),
+      hour: value.getHours(),
+      minute: value.getMinutes(),
+      second: value.getSeconds(),
+    };
   }
 
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    const [y, m, d] = value.split("-").map(Number);
-    return new Date(y, m - 1, d);
-  }
+  const m = String(value).trim().match(LOCAL_DATETIME_RE);
+  if (!m) return null;
 
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? null : d;
+  return {
+    year: Number(m[1]),
+    month: Number(m[2]),
+    day: Number(m[3]),
+    hour: Number(m[4] ?? 0),
+    minute: Number(m[5] ?? 0),
+    second: Number(m[6] ?? 0),
+  };
 };
+
+/** Local Date for comparisons / grouping only (from wall-clock parts). */
+export const parseLocalDate = (value) => {
+  const p = extractLocalDateTimeParts(value);
+  if (!p) {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+    return null;
+  }
+  return new Date(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+};
+
+export const parseLocalDateTime = parseLocalDate;
 
 export const getOrdinalDay = (day) => {
   const n = Number(day);
@@ -46,18 +81,45 @@ export const getOrdinalDay = (day) => {
   }
 };
 
-/** e.g. 15th July 2026 */
+/** e.g. 15th July 2026 — from string digits, not device TZ */
 export const formatDisplayDate = (value) => {
-  const d = parseLocalDate(value);
-  if (!d) return value ? String(value) : "";
-  return `${getOrdinalDay(d.getDate())} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  const p = extractLocalDateTimeParts(value);
+  if (!p) return value ? String(value) : "";
+  return `${getOrdinalDay(p.day)} ${MONTHS[p.month - 1]} ${p.year}`;
 };
 
 /** e.g. 1 Jan 2026 */
 export const formatShortDate = (value) => {
-  const d = parseLocalDate(value);
-  if (!d) return value ? String(value) : "";
-  return `${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)} ${d.getFullYear()}`;
+  const p = extractLocalDateTimeParts(value);
+  if (!p) return value ? String(value) : "";
+  return `${p.day} ${MONTHS[p.month - 1].slice(0, 3)} ${p.year}`;
+};
+
+/** e.g. 11:00 am — from string digits, identical on every device */
+export const formatDisplayTime = (value) => {
+  if (value == null || value === "") return "";
+
+  const raw = String(value).trim();
+  // Date-only strings have no time to show
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return "";
+
+  const p = extractLocalDateTimeParts(value);
+  if (!p) return "";
+
+  const hour24 = p.hour;
+  const minute = String(p.minute).padStart(2, "0");
+  const ampm = hour24 >= 12 ? "pm" : "am";
+  const hour12 = hour24 % 12 || 12;
+  return `${hour12}:${minute} ${ampm}`;
+};
+
+/** Local YYYY-MM-DD (not UTC via toISOString). */
+export const toLocalDateInputValue = (base = new Date()) => {
+  const d = base instanceof Date ? base : new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 };
 
 export default formatDisplayDate;

@@ -1,34 +1,35 @@
 import { CalendarDays, Phone } from "lucide-react";
-import { formatDisplayDate } from "../utils/formatDate";
+import {
+  formatDisplayDate,
+  formatDisplayTime,
+  parseLocalDateTime,
+} from "../utils/formatDate";
 
 const OrderCard = ({
-    order,
-    onMarkPaid,
-    onDelete,
-    onReminder,
-    onEdit,
-  }) => {
-    const deliveryDate = new Date(order.delivery_datetime);
+  order,
+  onMarkPaid,
+  onDelete,
+  onReminder,
+  onEdit,
+}) => {
+  const deliveryDate = parseLocalDateTime(order.delivery_datetime);
 
-    const today = new Date();
-    const tomorrow = new Date();
-    tomorrow.setDate(today.getDate() + 1);
+  const today = new Date();
+  const tomorrow = new Date();
+  tomorrow.setDate(today.getDate() + 1);
 
-    let deliveryDay = formatDisplayDate(order.delivery_datetime);
+  let deliveryDay = formatDisplayDate(order.delivery_datetime);
 
-    if (deliveryDate.toDateString() === today.toDateString()) {
-      deliveryDay = "Today";
-    } else if (
-      deliveryDate.toDateString() === tomorrow.toDateString()
-    ) {
-      deliveryDay = "Tomorrow";
-    }
+  if (deliveryDate && deliveryDate.toDateString() === today.toDateString()) {
+    deliveryDay = "Today";
+  } else if (
+    deliveryDate &&
+    deliveryDate.toDateString() === tomorrow.toDateString()
+  ) {
+    deliveryDay = "Tomorrow";
+  }
 
-    const deliveryTime = deliveryDate.toLocaleTimeString("en-IN", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
+  const deliveryTime = formatDisplayTime(order.delivery_datetime);
 
 
 

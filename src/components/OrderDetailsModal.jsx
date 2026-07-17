@@ -1,5 +1,5 @@
 import { Bell, Check, Pencil, Trash2, X } from "lucide-react";
-import { formatDisplayDate } from "../utils/formatDate";
+import { formatDisplayDate, formatDisplayTime } from "../utils/formatDate";
 
 const formatMoney = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN")}`;
@@ -16,14 +16,8 @@ const OrderDetailsModal = ({
 }) => {
   if (!open || !order) return null;
 
-  const delivery = new Date(order.delivery_datetime);
   const date = formatDisplayDate(order.delivery_datetime);
-
-  const time = delivery.toLocaleTimeString("en-IN", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+  const time = formatDisplayTime(order.delivery_datetime);
 
   return (
     <div

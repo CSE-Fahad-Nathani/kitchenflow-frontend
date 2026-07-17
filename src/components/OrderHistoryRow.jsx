@@ -1,4 +1,5 @@
 import { Check, Loader2 } from "lucide-react";
+import { formatDisplayTime } from "../utils/formatDate";
 
 const OrderHistoryRow = ({
   order,
@@ -6,13 +7,7 @@ const OrderHistoryRow = ({
   onMarkPaid,
   markingPaid = false,
 }) => {
-  const delivery = new Date(order.delivery_datetime);
-
-  const time = delivery.toLocaleTimeString("en-IN", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+  const time = formatDisplayTime(order.delivery_datetime);
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.03)] px-3 py-2.5 flex items-center gap-2">

@@ -11,23 +11,15 @@ import {
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { useToastStore } from "../store/toastStore";
-import { formatDisplayDate } from "../utils/formatDate";
+import { formatDisplayDate, formatDisplayTime } from "../utils/formatDate";
 
 const formatMoney = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN")}`;
 
-const formatDelivery = (datetime) => {
-  const delivery = new Date(datetime);
-
-  return {
-    date: formatDisplayDate(datetime),
-    time: delivery.toLocaleTimeString("en-IN", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    }),
-  };
-};
+const formatDelivery = (datetime) => ({
+  date: formatDisplayDate(datetime),
+  time: formatDisplayTime(datetime),
+});
 
 /** hex-only styles — html2canvas cannot parse Tailwind v4 oklch() colors */
 const s = {

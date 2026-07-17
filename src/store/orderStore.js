@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { toLocalDateInputValue } from "../utils/formatDate";
 
 
 
@@ -44,7 +45,7 @@ const useOrderStore = create((set) => ({
   customer_id: null,
   mobile: "",
 
-  deliveryDate: new Date().toISOString().split("T")[0],
+  deliveryDate: toLocalDateInputValue(),
   deliveryTime: getDefaultDeliveryTime(),
   
   deliveryCharge: 0,
@@ -178,7 +179,7 @@ const useOrderStore = create((set) => ({
       customer_id: null,
       mobile: "",
 
-      deliveryDate: new Date().toISOString().split("T")[0],
+      deliveryDate: toLocalDateInputValue(),
       deliveryTime: getDefaultDeliveryTime(),
 
       deliveryCharge: 0,
