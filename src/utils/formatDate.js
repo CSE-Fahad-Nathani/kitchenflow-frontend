@@ -55,6 +55,12 @@ export const extractLocalDateTimeParts = (value) => {
 
 /** Local Date for comparisons / grouping only (from wall-clock parts). */
 export const parseLocalDate = (value) => {
+  const raw = value != null ? String(value).trim() : "";
+  if (/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/i.test(raw)) {
+    const d = new Date(raw);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+
   const p = extractLocalDateTimeParts(value);
   if (!p) {
     if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
@@ -81,16 +87,32 @@ export const getOrdinalDay = (day) => {
   }
 };
 
+/** Legacy pg DATE JSON ends with Z — use local calendar day, not UTC digits in the string. */
+const partsForDisplayDate = (value) => {
+  const raw = value != null ? String(value).trim() : "";
+  if (/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/i.test(raw)) {
+    const d = new Date(raw);
+    if (!Number.isNaN(d.getTime())) {
+      return {
+        year: d.getFullYear(),
+        month: d.getMonth() + 1,
+        day: d.getDate(),
+      };
+    }
+  }
+  return extractLocalDateTimeParts(value);
+};
+
 /** e.g. 15th July 2026 — from string digits, not device TZ */
 export const formatDisplayDate = (value) => {
-  const p = extractLocalDateTimeParts(value);
+  const p = partsForDisplayDate(value);
   if (!p) return value ? String(value) : "";
   return `${getOrdinalDay(p.day)} ${MONTHS[p.month - 1]} ${p.year}`;
 };
 
 /** e.g. 1 Jan 2026 */
 export const formatShortDate = (value) => {
-  const p = extractLocalDateTimeParts(value);
+  const p = partsForDisplayDate(value);
   if (!p) return value ? String(value) : "";
   return `${p.day} ${MONTHS[p.month - 1].slice(0, 3)} ${p.year}`;
 };

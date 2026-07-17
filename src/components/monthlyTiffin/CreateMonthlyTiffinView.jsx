@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   CalendarDays,
   Loader2,
+  Minus,
   Phone,
   Plus,
   Trash2,
@@ -112,6 +113,11 @@ const CreateMonthlyTiffinView = ({
       variant_name: variant.variant_name || "",
       rate_per_day: String(Number(variant.price) || ""),
     });
+  };
+
+  const updateQuantity = (next) => {
+    const n = Math.max(1, Number(next) || 1);
+    onFormChange({ quantity: String(n) });
   };
 
   return (
@@ -316,10 +322,43 @@ const CreateMonthlyTiffinView = ({
               }
               onFormChange({ variant_name: value });
             }}
-            placeholder="Variant (e.g. 1 Tiffin)"
+            placeholder="Variant (optional)"
             className={`${fieldClass} px-3`}
           />
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                Quantity / Day
+              </span>
+              <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl h-9 mt-1 focus-within:border-orange-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+                <button
+                  type="button"
+                  onClick={() => updateQuantity(Number(form.quantity) - 1)}
+                  className="press-scale w-9 h-full flex items-center justify-center text-gray-600"
+                  aria-label="Decrease quantity"
+                >
+                  <Minus size={14} strokeWidth={2.5} />
+                </button>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  step="1"
+                  value={form.quantity}
+                  onChange={(e) => updateQuantity(e.target.value)}
+                  className="w-10 text-center bg-transparent outline-none text-[13px] font-bold"
+                  aria-label="Quantity per day"
+                />
+                <button
+                  type="button"
+                  onClick={() => updateQuantity(Number(form.quantity) + 1)}
+                  className="press-scale w-9 h-full flex items-center justify-center text-gray-600"
+                  aria-label="Increase quantity"
+                >
+                  <Plus size={14} strokeWidth={2.5} />
+                </button>
+              </div>
+            </label>
             <label className="block">
               <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                 Rate / Day
@@ -338,7 +377,7 @@ const CreateMonthlyTiffinView = ({
             </label>
             <label className="block">
               <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                Delivery
+                Delivery / Day
               </span>
               <input
                 type="number"
@@ -449,6 +488,12 @@ const CreateMonthlyTiffinView = ({
           <span className="font-semibold text-gray-900">{calc.billableDays}</span>
         </div>
         <div className="flex justify-between text-[13px]">
+          <span className="text-gray-500">Qty × Rate</span>
+          <span className="font-semibold text-gray-900">
+            {calc.quantity} × {money(form.rate_per_day)}
+          </span>
+        </div>
+        <div className="flex justify-between text-[13px]">
           <span className="text-gray-500">Subtotal</span>
           <span className="font-semibold text-gray-900">
             {money(calc.subtotal)}
@@ -457,6 +502,7 @@ const CreateMonthlyTiffinView = ({
         <div className="flex justify-between text-[13px]">
           <span className="text-gray-500">Delivery</span>
           <span className="font-semibold text-gray-900">
+            {calc.billableDays} × {money(calc.deliveryPerDay)} ={" "}
             {money(calc.deliveryCharge)}
           </span>
         </div>

@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, CalendarPlus, History } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   createMonthlyTiffinBill,
   deleteMonthlyTiffinBill,
   fetchMonthlyTiffinBillById,
   fetchMonthlyTiffinBills,
+  increaseMonthlyTiffinReminder,
+  markMonthlyTiffinPaid,
 } from "../../api/monthlyTiffinApi";
 import { addCustomer } from "../../api/customerApi";
 import CreateMonthlyTiffinView from "../../components/monthlyTiffin/CreateMonthlyTiffinView";
@@ -37,6 +39,7 @@ const initialForm = () => {
     to_date: range.toDate,
     dish_name: "",
     variant_name: "",
+    quantity: "1",
     rate_per_day: "",
     delivery_charge: "",
     discount: "",
@@ -48,7 +51,7 @@ const MonthlyTiffin = () => {
   const navigate = useNavigate();
   const toast = useToastStore();
 
-  const [view, setView] = useState("home"); // home | create | history | detail
+  const [view, setView] = useState("create"); // create | history | detail
 
   const [form, setForm] = useState(initialForm);
   const [excludedDates, setExcludedDates] = useState([]);
@@ -65,9 +68,11 @@ const MonthlyTiffin = () => {
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewBill, setPreviewBill] = useState(null);
+  const [previewVariant, setPreviewVariant] = useState("bill");
 
   const isNewCustomerCandidate = Boolean(
     form.customer_name.trim() && !form.customer_id
@@ -79,6 +84,7 @@ const MonthlyTiffin = () => {
         fromDate: form.from_date,
         toDate: form.to_date,
         ratePerDay: form.rate_per_day,
+        quantity: form.quantity,
         deliveryCharge: form.delivery_charge,
         discount: form.discount,
         excludedDates,
@@ -198,6 +204,10 @@ const MonthlyTiffin = () => {
       toast.warning("Missing", "Dish name is required.");
       return false;
     }
+    if (!(Number(form.quantity) > 0)) {
+      toast.warning("Missing", "Quantity must be greater than 0.");
+      return false;
+    }
     if (!(Number(form.rate_per_day) > 0)) {
       toast.warning("Missing", "Rate per day must be greater than 0.");
       return false;
@@ -251,6 +261,7 @@ const MonthlyTiffin = () => {
         to_date: form.to_date,
         dish_name: form.dish_name.trim(),
         variant_name: form.variant_name.trim() || "",
+        quantity: Number(form.quantity) || 1,
         rate_per_day: Number(form.rate_per_day),
         delivery_charge: Number(form.delivery_charge) || 0,
         discount: Number(form.discount) || 0,
@@ -268,10 +279,10 @@ const MonthlyTiffin = () => {
       };
 
       setPreviewBill(preview);
+      setPreviewVariant("bill");
       setPreviewOpen(true);
       toast.success("Created", "Monthly tiffin bill saved.");
       resetCreateForm();
-      setView("home");
     } catch (error) {
       console.error(error);
       toast.error(
@@ -280,6 +291,65 @@ const MonthlyTiffin = () => {
       );
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const syncBillPayment = (bill_id, patch) => {
+    setDetail((prev) =>
+      prev?.bill_id === bill_id ? { ...prev, ...patch } : prev
+    );
+    setBills((prev) =>
+      prev.map((bill) =>
+        bill.bill_id === bill_id ? { ...bill, ...patch } : bill
+      )
+    );
+    setPreviewBill((prev) =>
+      prev?.bill_id === bill_id ? { ...prev, ...patch } : prev
+    );
+  };
+
+  const handleMarkPaid = () => {
+    if (!detail?.bill_id || markingPaid || detail.is_paid) return;
+
+    toast.confirm({
+      title: "Mark as Paid?",
+      message: "This will mark the tiffin bill as paid.",
+      confirmLabel: "Mark Paid",
+      cancelLabel: "Cancel",
+      onConfirm: async () => {
+        try {
+          setMarkingPaid(true);
+          await markMonthlyTiffinPaid(detail.bill_id);
+          syncBillPayment(detail.bill_id, { is_paid: true });
+          toast.success("Marked Paid", "Payment updated successfully.");
+        } catch (error) {
+          console.error(error);
+          toast.error("Failed", "Unable to update payment.");
+        } finally {
+          setMarkingPaid(false);
+        }
+      },
+    });
+  };
+
+  const handleReminder = async () => {
+    if (!detail?.bill_id) return;
+
+    try {
+      const response = await increaseMonthlyTiffinReminder(detail.bill_id);
+      const reminder_count = response.data.reminder_count;
+      const updated = { ...detail, reminder_count };
+      syncBillPayment(detail.bill_id, { reminder_count });
+      setPreviewBill(updated);
+      setPreviewVariant("reminder");
+      setPreviewOpen(true);
+      toast.success(
+        "Reminder ready",
+        `Reminder #${reminder_count} — download or copy to send.`
+      );
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed", "Unable to update reminder.");
     }
   };
 
@@ -317,14 +387,14 @@ const MonthlyTiffin = () => {
       return {
         title: "Create Tiffin Bill",
         subtitle: "Monthly subscription",
-        back: () => setView("home"),
+        back: () => navigate("/orders"),
       };
     }
     if (view === "history") {
       return {
         title: "Tiffin History",
         subtitle: "Search past bills",
-        back: () => setView("home"),
+        back: () => setView("create"),
       };
     }
     if (view === "detail") {
@@ -374,43 +444,6 @@ const MonthlyTiffin = () => {
         </div>
       </header>
 
-      {view === "home" && (
-        <div className="px-3.5 py-4 space-y-2.5">
-          <button
-            type="button"
-            onClick={() => {
-              resetCreateForm();
-              setView("create");
-            }}
-            className="press-scale w-full text-left bg-white rounded-2xl border border-gray-100 p-4 shadow-[0_2px_10px_rgba(0,0,0,0.04)] active:border-orange-200"
-          >
-            <div className="w-12 h-12 rounded-xl bg-orange-50 border border-orange-100 text-orange-500 flex items-center justify-center mb-3">
-              <CalendarPlus size={22} />
-            </div>
-            <p className="text-[15px] font-bold text-gray-900">
-              Create Monthly Tiffin Bill
-            </p>
-            <p className="text-[12.5px] text-gray-500 mt-1">
-              Set date range, dish rate, and excluded days
-            </p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setView("history")}
-            className="press-scale w-full text-left bg-white rounded-2xl border border-gray-100 p-4 shadow-[0_2px_10px_rgba(0,0,0,0.04)] active:border-orange-200"
-          >
-            <div className="w-12 h-12 rounded-xl bg-orange-50 border border-orange-100 text-orange-500 flex items-center justify-center mb-3">
-              <History size={22} />
-            </div>
-            <p className="text-[15px] font-bold text-gray-900">History</p>
-            <p className="text-[12.5px] text-gray-500 mt-1">
-              Search and open past tiffin bills
-            </p>
-          </button>
-        </div>
-      )}
-
       {view === "create" && (
         <CreateMonthlyTiffinView
           form={form}
@@ -456,10 +489,14 @@ const MonthlyTiffin = () => {
           loading={detailLoading}
           bill={detail}
           deleting={deleting}
+          markingPaid={markingPaid}
           onPreview={() => {
             setPreviewBill(detail);
+            setPreviewVariant("bill");
             setPreviewOpen(true);
           }}
+          onMarkPaid={handleMarkPaid}
+          onReminder={handleReminder}
           onDelete={handleDelete}
         />
       )}
@@ -467,9 +504,11 @@ const MonthlyTiffin = () => {
       <TiffinBillPreviewModal
         open={previewOpen}
         bill={previewBill}
+        variant={previewVariant}
         onClose={() => {
           setPreviewOpen(false);
           setPreviewBill(null);
+          setPreviewVariant("bill");
         }}
       />
     </div>

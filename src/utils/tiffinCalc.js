@@ -46,6 +46,7 @@ export const calcTiffinBill = ({
   fromDate,
   toDate,
   ratePerDay = 0,
+  quantity = 1,
   deliveryCharge = 0,
   discount = 0,
   excludedDates = [],
@@ -54,17 +55,21 @@ export const calcTiffinBill = ({
   const excludedDays = countExcludedDays(fromDate, toDate, excludedDates);
   const billableDays = Math.max(0, totalDays - excludedDays);
   const rate = Number(ratePerDay) || 0;
-  const delivery = Number(deliveryCharge) || 0;
+  const qty = Math.max(1, Number(quantity) || 1);
+  const deliveryPerDay = Number(deliveryCharge) || 0;
   const disc = Number(discount) || 0;
-  const subtotal = billableDays * rate;
-  const grandTotal = Math.max(0, subtotal + delivery - disc);
+  const itemsSubtotal = billableDays * rate * qty;
+  const deliveryTotal = billableDays * deliveryPerDay;
+  const grandTotal = Math.max(0, itemsSubtotal + deliveryTotal - disc);
 
   return {
     totalDays,
     excludedDays,
     billableDays,
-    subtotal,
-    deliveryCharge: delivery,
+    quantity: qty,
+    deliveryPerDay,
+    subtotal: itemsSubtotal,
+    deliveryCharge: deliveryTotal,
     discount: disc,
     grandTotal,
   };

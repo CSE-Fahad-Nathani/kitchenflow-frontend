@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Minus, Plus, Trash2 } from "lucide-react";
 import { searchDishes } from "../../api/dishApi";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 
@@ -74,6 +74,11 @@ const DatewiseItemFields = ({ item, onChange, onRemove }) => {
       variant_name: variant.variant_name || "",
       price: String(Number(variant.price) || ""),
     });
+  };
+
+  const updateQuantity = (next) => {
+    const n = Math.max(1, Number(next) || 1);
+    onChange({ quantity: String(n) });
   };
 
   return (
@@ -164,7 +169,7 @@ const DatewiseItemFields = ({ item, onChange, onRemove }) => {
         </div>
       )}
 
-      <div className="grid grid-cols-[1fr_72px_88px] gap-1.5">
+      <div className="grid grid-cols-[1fr_auto_88px] gap-1.5">
         <input
           value={item.variant_name}
           onChange={(e) => {
@@ -179,16 +184,34 @@ const DatewiseItemFields = ({ item, onChange, onRemove }) => {
           placeholder="Variant (opt.)"
           className={itemFieldClass}
         />
-        <input
-          type="number"
-          inputMode="numeric"
-          min="1"
-          step="1"
-          value={item.quantity}
-          onChange={(e) => onChange({ quantity: e.target.value })}
-          placeholder="Qty"
-          className={itemFieldClass}
-        />
+        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg h-8 shrink-0">
+          <button
+            type="button"
+            onClick={() => updateQuantity(Number(item.quantity) - 1)}
+            className="press-scale w-7 h-full flex items-center justify-center text-gray-600"
+            aria-label="Decrease quantity"
+          >
+            <Minus size={12} strokeWidth={2.5} />
+          </button>
+          <input
+            type="number"
+            inputMode="numeric"
+            min="1"
+            step="1"
+            value={item.quantity}
+            onChange={(e) => updateQuantity(e.target.value)}
+            className="w-7 text-center bg-transparent outline-none text-[12.5px] font-bold"
+            aria-label="Quantity"
+          />
+          <button
+            type="button"
+            onClick={() => updateQuantity(Number(item.quantity) + 1)}
+            className="press-scale w-7 h-full flex items-center justify-center text-gray-600"
+            aria-label="Increase quantity"
+          >
+            <Plus size={12} strokeWidth={2.5} />
+          </button>
+        </div>
         <input
           type="number"
           inputMode="decimal"

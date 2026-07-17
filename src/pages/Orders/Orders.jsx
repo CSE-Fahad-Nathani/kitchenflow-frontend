@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import {
+  ArrowLeft,
   Plus,
   User,
   Phone,
@@ -365,17 +366,42 @@ const Orders = () => {
     }
   };
 
+  const handleBack = () => {
+    if (isEditing) {
+      resetOrder();
+      navigate("/history");
+      return;
+    }
+    navigate("/orders");
+  };
+
   return (
     <div className="max-w-md mx-auto h-[calc(100dvh-4rem)] -mb-20 overflow-hidden bg-gray-50 flex flex-col">
       <header className="shrink-0 relative bg-gradient-to-br from-orange-500 to-orange-600 px-4 pt-safe pb-5 rounded-b-[1.5rem] shadow-[0_8px_24px_-8px_rgba(249,115,22,0.5)] overflow-hidden">
         <div className="absolute -top-10 -right-10 w-36 h-36 bg-white/10 rounded-full blur-2xl pointer-events-none" />
 
-        <p className="relative text-orange-100 text-[10px] font-semibold tracking-[0.12em] uppercase">
-          Arefa's Kitchen
-        </p>
-        <h1 className="relative text-[1.35rem] font-bold text-white leading-tight mt-0.5 tracking-tight">
-          {isEditing ? "Edit Order" : "New Order"}
-        </h1>
+        <div className="relative flex items-start gap-2.5">
+          <button
+            type="button"
+            onClick={handleBack}
+            aria-label="Back"
+            className="press-scale mt-1 w-9 h-9 rounded-lg bg-white/15 border border-white/20 flex items-center justify-center text-white"
+          >
+            <ArrowLeft size={18} />
+          </button>
+
+          <div className="min-w-0">
+            <p className="text-orange-100 text-[10px] font-semibold tracking-[0.12em] uppercase">
+              Arefa's Kitchen
+            </p>
+            <h1 className="text-[1.35rem] font-bold text-white leading-tight mt-0.5 tracking-tight">
+              {isEditing ? "Edit Order" : "New Order"}
+            </h1>
+            <p className="text-orange-100/90 text-[12px] mt-0.5 truncate">
+              {isEditing ? "Update delivery & items" : "Standard order billing"}
+            </p>
+          </div>
+        </div>
       </header>
 
       <div

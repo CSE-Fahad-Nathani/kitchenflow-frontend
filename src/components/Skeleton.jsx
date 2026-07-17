@@ -62,4 +62,37 @@ export const DishRowSkeleton = () => (
   </div>
 );
 
+/** Analysis page section placeholder */
+export const AnalysisSectionSkeleton = ({ tiles = 4, rows = 0 }) => (
+  <div className="bg-white rounded-2xl border border-gray-100 p-3 shadow-[0_1px_8px_rgba(0,0,0,0.03)] space-y-2.5">
+    <Skeleton className="h-3.5 w-36 rounded-md" />
+    {tiles > 0 && (
+      <div className="grid grid-cols-2 gap-2">
+        {Array.from({ length: tiles }).map((_, i) => (
+          <div
+            key={i}
+            className="rounded-xl bg-gray-50 border border-gray-100 px-2.5 py-2 space-y-1.5"
+          >
+            <Skeleton className="h-2.5 w-14 rounded-md" />
+            <Skeleton className="h-4 w-16 rounded-md" />
+          </div>
+        ))}
+      </div>
+    )}
+    {rows > 0 && (
+      <div className="space-y-2 pt-0.5">
+        {Array.from({ length: rows }).map((_, i) => (
+          <div key={i} className="flex items-center justify-between gap-3 py-1">
+            <div className="space-y-1.5 flex-1 min-w-0">
+              <Skeleton className="h-3 w-28 rounded-md" />
+              <Skeleton className="h-2.5 w-20 rounded-md" />
+            </div>
+            <Skeleton className="h-3.5 w-12 rounded-md shrink-0" />
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+);
+
 export default Skeleton;

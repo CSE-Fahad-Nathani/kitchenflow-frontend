@@ -239,7 +239,7 @@ const CreateDatewiseBillView = ({
                           onChange={(e) =>
                             onUpdateDay(dayIndex, { note: e.target.value })
                           }
-                          placeholder="e.g. Birthday"
+                          placeholder="e.g. Lunch / Dinner"
                           className={`${fieldClass} px-3 mt-1`}
                         />
                       </label>

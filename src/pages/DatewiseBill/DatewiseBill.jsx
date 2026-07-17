@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, CalendarPlus, History } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   createDatewiseBill,
   deleteDatewiseBill,
   fetchDatewiseBillById,
   fetchDatewiseBills,
+  increaseDatewiseBillReminder,
+  markDatewiseBillPaid,
 } from "../../api/datewiseBillApi";
 import { addCustomer } from "../../api/customerApi";
 import CreateDatewiseBillView from "../../components/datewise/CreateDatewiseBillView";
@@ -54,7 +56,7 @@ const DatewiseBill = () => {
   const navigate = useNavigate();
   const toast = useToastStore();
 
-  const [view, setView] = useState("home"); // home | create | history | detail
+  const [view, setView] = useState("create"); // create | history | detail
 
   const [customer, setCustomer] = useState(initialCustomer);
   const [days, setDays] = useState(() => [emptyDay()]);
@@ -71,9 +73,11 @@ const DatewiseBill = () => {
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewBill, setPreviewBill] = useState(null);
+  const [previewVariant, setPreviewVariant] = useState("bill");
 
   const isNewCustomerCandidate = Boolean(
     customer.customer_name.trim() && !customer.customer_id
@@ -333,10 +337,10 @@ const DatewiseBill = () => {
         ...payload,
         bill_id: billId,
       });
+      setPreviewVariant("bill");
       setPreviewOpen(true);
       toast.success("Created", "Date-wise bill saved.");
       resetCreateForm();
-      setView("home");
     } catch (error) {
       console.error(error);
       toast.error(
@@ -345,6 +349,65 @@ const DatewiseBill = () => {
       );
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const syncBillPayment = (bill_id, patch) => {
+    setDetail((prev) =>
+      prev?.bill_id === bill_id ? { ...prev, ...patch } : prev
+    );
+    setBills((prev) =>
+      prev.map((bill) =>
+        bill.bill_id === bill_id ? { ...bill, ...patch } : bill
+      )
+    );
+    setPreviewBill((prev) =>
+      prev?.bill_id === bill_id ? { ...prev, ...patch } : prev
+    );
+  };
+
+  const handleMarkPaid = () => {
+    if (!detail?.bill_id || markingPaid || detail.is_paid) return;
+
+    toast.confirm({
+      title: "Mark as Paid?",
+      message: "This will mark the date-wise bill as paid.",
+      confirmLabel: "Mark Paid",
+      cancelLabel: "Cancel",
+      onConfirm: async () => {
+        try {
+          setMarkingPaid(true);
+          await markDatewiseBillPaid(detail.bill_id);
+          syncBillPayment(detail.bill_id, { is_paid: true });
+          toast.success("Marked Paid", "Payment updated successfully.");
+        } catch (error) {
+          console.error(error);
+          toast.error("Failed", "Unable to update payment.");
+        } finally {
+          setMarkingPaid(false);
+        }
+      },
+    });
+  };
+
+  const handleReminder = async () => {
+    if (!detail?.bill_id) return;
+
+    try {
+      const response = await increaseDatewiseBillReminder(detail.bill_id);
+      const reminder_count = response.data.reminder_count;
+      const updated = { ...detail, reminder_count };
+      syncBillPayment(detail.bill_id, { reminder_count });
+      setPreviewBill(updated);
+      setPreviewVariant("reminder");
+      setPreviewOpen(true);
+      toast.success(
+        "Reminder ready",
+        `Reminder #${reminder_count} — download or copy to send.`
+      );
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed", "Unable to update reminder.");
     }
   };
 
@@ -382,14 +445,14 @@ const DatewiseBill = () => {
       return {
         title: "Create Date-wise Bill",
         subtitle: "Orders grouped by date",
-        back: () => setView("home"),
+        back: () => navigate("/orders"),
       };
     }
     if (view === "history") {
       return {
         title: "Date-wise History",
         subtitle: "Search past bills",
-        back: () => setView("home"),
+        back: () => setView("create"),
       };
     }
     if (view === "detail") {
@@ -439,43 +502,6 @@ const DatewiseBill = () => {
         </div>
       </header>
 
-      {view === "home" && (
-        <div className="px-3.5 py-4 space-y-2.5">
-          <button
-            type="button"
-            onClick={() => {
-              resetCreateForm();
-              setView("create");
-            }}
-            className="press-scale w-full text-left bg-white rounded-2xl border border-gray-100 p-4 shadow-[0_2px_10px_rgba(0,0,0,0.04)] active:border-orange-200"
-          >
-            <div className="w-12 h-12 rounded-xl bg-orange-50 border border-orange-100 text-orange-500 flex items-center justify-center mb-3">
-              <CalendarPlus size={22} />
-            </div>
-            <p className="text-[15px] font-bold text-gray-900">
-              Create Date-wise Bill
-            </p>
-            <p className="text-[12.5px] text-gray-500 mt-1">
-              Add dates, dishes, and delivery per day
-            </p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setView("history")}
-            className="press-scale w-full text-left bg-white rounded-2xl border border-gray-100 p-4 shadow-[0_2px_10px_rgba(0,0,0,0.04)] active:border-orange-200"
-          >
-            <div className="w-12 h-12 rounded-xl bg-orange-50 border border-orange-100 text-orange-500 flex items-center justify-center mb-3">
-              <History size={22} />
-            </div>
-            <p className="text-[15px] font-bold text-gray-900">History</p>
-            <p className="text-[12.5px] text-gray-500 mt-1">
-              Search and open past date-wise bills
-            </p>
-          </button>
-        </div>
-      )}
-
       {view === "create" && (
         <CreateDatewiseBillView
           customer={customer}
@@ -516,10 +542,14 @@ const DatewiseBill = () => {
           loading={detailLoading}
           bill={detail}
           deleting={deleting}
+          markingPaid={markingPaid}
           onPreview={() => {
             setPreviewBill(detail);
+            setPreviewVariant("bill");
             setPreviewOpen(true);
           }}
+          onMarkPaid={handleMarkPaid}
+          onReminder={handleReminder}
           onDelete={handleDelete}
         />
       )}
@@ -527,9 +557,11 @@ const DatewiseBill = () => {
       <DatewiseBillPreviewModal
         open={previewOpen}
         bill={previewBill}
+        variant={previewVariant}
         onClose={() => {
           setPreviewOpen(false);
           setPreviewBill(null);
+          setPreviewVariant("bill");
         }}
       />
     </div>

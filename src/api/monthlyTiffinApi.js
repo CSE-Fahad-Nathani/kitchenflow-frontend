@@ -23,3 +23,15 @@ export const deleteMonthlyTiffinBill = async (bill_id) => {
   });
   return response.data;
 };
+
+export const markMonthlyTiffinPaid = async (bill_id) => {
+  const response = await api.patch("/monthly-tiffin/mark-paid", { bill_id });
+  return response.data;
+};
+
+export const increaseMonthlyTiffinReminder = async (bill_id) => {
+  const response = await api.patch("/monthly-tiffin/increase-reminder", {
+    bill_id,
+  });
+  return response.data;
+};

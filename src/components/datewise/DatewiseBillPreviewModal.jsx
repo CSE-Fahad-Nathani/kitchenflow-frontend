@@ -130,6 +130,19 @@ const s = {
     color: "#9ca3af",
     lineHeight: 1.6,
   },
+  reminderBanner: {
+    margin: "0 0 10px",
+    padding: "8px 10px",
+    backgroundColor: "#fff7ed",
+    border: "1px solid #fed7aa",
+    borderRadius: "8px",
+    textAlign: "center",
+    fontSize: "14px",
+    fontWeight: 800,
+    color: "#ea580c",
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+  },
 };
 
 const itemLabel = (item) => {
@@ -139,7 +152,10 @@ const itemLabel = (item) => {
     : name;
 };
 
-export const buildDatewiseCopyText = (bill) => {
+export const buildDatewiseCopyText = (
+  bill,
+  { isReminder = false, reminderCount = 0 } = {}
+) => {
   const customerName = bill.customer_name?.trim();
   const customerMobile = bill.customer_mobile?.trim();
 
@@ -182,7 +198,7 @@ Discount = *-₹${Number(bill.discount).toLocaleString("en-IN")}/-*`
   const calc = calcDatewiseBill(days, bill.discount);
   const total = Number(bill.total_amount ?? calc.grandTotal);
 
-  return `*Arefa's Kitchen*
+  return `${isReminder ? `*REMINDER #${reminderCount}*\n\n` : ""}*Arefa's Kitchen*
 
 ${customerLine}
 ${dayBlocks}${discountLine}
@@ -190,7 +206,7 @@ ${dayBlocks}${discountLine}
 *Total = ₹${total.toLocaleString("en-IN")}/-*`;
 };
 
-const DatewiseBillPreviewModal = ({ open, bill, onClose }) => {
+const DatewiseBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => {
   const toast = useToastStore();
   const billRef = useRef(null);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
@@ -198,10 +214,15 @@ const DatewiseBillPreviewModal = ({ open, bill, onClose }) => {
 
   if (!open || !bill) return null;
 
+  const isReminder = variant === "reminder";
+  const reminderCount = Number(bill.reminder_count || 0);
+
   const days = bill.days || [];
   const calc = calcDatewiseBill(days, bill.discount);
   const grandTotal = Number(bill.total_amount ?? calc.grandTotal);
-  const fileBase = `Arefas-Kitchen-Datewise-${bill.customer_name || "bill"}`;
+  const fileBase = isReminder
+    ? `Arefas-Kitchen-Datewise-Reminder-${bill.customer_name || "bill"}-${reminderCount}`
+    : `Arefas-Kitchen-Datewise-${bill.customer_name || "bill"}`;
 
   const captureBill = async () => {
     const node = billRef.current;
@@ -293,7 +314,9 @@ const DatewiseBillPreviewModal = ({ open, bill, onClose }) => {
 
   const handleCopyText = async () => {
     try {
-      await navigator.clipboard.writeText(buildDatewiseCopyText(bill));
+      await navigator.clipboard.writeText(
+        buildDatewiseCopyText(bill, { isReminder, reminderCount })
+      );
       toast.success("Copied", "Bill text copied successfully.");
     } catch (error) {
       console.error(error);
@@ -311,7 +334,9 @@ const DatewiseBillPreviewModal = ({ open, bill, onClose }) => {
         className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[92dvh] overflow-hidden animate-slide-up flex flex-col"
       >
         <div className="shrink-0 flex justify-between items-center border-b px-5 py-4">
-          <h2 className="font-bold text-xl">Date-wise Bill Preview</h2>
+          <h2 className="font-bold text-xl">
+            {isReminder ? "Reminder Preview" : "Date-wise Bill Preview"}
+          </h2>
           <button type="button" onClick={onClose} aria-label="Close">
             <X />
           </button>
@@ -321,9 +346,14 @@ const DatewiseBillPreviewModal = ({ open, bill, onClose }) => {
           <div ref={billRef} style={s.bill}>
             <div style={s.inner}>
               <div style={s.center}>
+                {isReminder && (
+                  <p style={s.reminderBanner}>Reminder #{reminderCount}</p>
+                )}
                 <h1 style={s.title}>Arefa's Kitchen</h1>
                 <p style={s.subtitle}>Homemade Food</p>
-                <p style={s.badge}>Date-wise Bill</p>
+                <p style={s.badge}>
+                  {isReminder ? "Payment Reminder" : "Date-wise Bill"}
+                </p>
               </div>
 
               <div style={s.divider} />

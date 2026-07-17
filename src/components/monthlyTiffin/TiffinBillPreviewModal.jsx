@@ -121,12 +121,28 @@ const s = {
     borderTop: "1px dashed #d1d5db",
     margin: "10px 0",
   },
+  reminderBanner: {
+    margin: "0 0 10px",
+    padding: "8px 10px",
+    backgroundColor: "#fff7ed",
+    border: "1px solid #fed7aa",
+    borderRadius: "8px",
+    textAlign: "center",
+    fontSize: "14px",
+    fontWeight: 800,
+    color: "#ea580c",
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+  },
 };
 
 const getExcludedList = (bill) =>
   (bill.excluded_dates || []).filter((row) => row?.excluded_date);
 
-export const buildTiffinCopyText = (bill, { includeExcluded = false } = {}) => {
+export const buildTiffinCopyText = (
+  bill,
+  { includeExcluded = false, isReminder = false, reminderCount = 0 } = {}
+) => {
   const customerName = bill.customer_name?.trim();
   const customerMobile = bill.customer_mobile?.trim();
 
@@ -143,6 +159,7 @@ export const buildTiffinCopyText = (bill, { includeExcluded = false } = {}) => {
     fromDate: bill.from_date,
     toDate: bill.to_date,
     ratePerDay: bill.rate_per_day,
+    quantity: bill.quantity,
     deliveryCharge: bill.delivery_charge,
     discount: bill.discount,
     excludedDates: bill.excluded_dates || [],
@@ -174,24 +191,26 @@ ${lines}
 `;
   }
 
-  return `*Arefa's Kitchen*
+  return `${isReminder ? `*REMINDER #${reminderCount}*\n\n` : ""}*Arefa's Kitchen*
 
 ${customerLine}${formatShortDate(bill.from_date)} - ${formatShortDate(bill.to_date)}
 
 ${dishLine}
 
+Quantity / Day = ${calc.quantity}
 Rate Per Day = *₹${Number(bill.rate_per_day).toLocaleString("en-IN")}*
 
 Total Days = ${calc.totalDays}
 Excluded Days = ${calc.excludedDays}
 Billable Days = ${calc.billableDays}
 ${excludedBlock}
-Delivery Charge = *₹${Number(bill.delivery_charge || 0).toLocaleString("en-IN")}*${discountLine}
+Delivery / Day = *₹${Number(bill.delivery_charge || 0).toLocaleString("en-IN")}*
+Delivery Total = *₹${Number(calc.deliveryCharge || 0).toLocaleString("en-IN")}*${discountLine}
 
 *Total = ₹${Number(bill.total_amount ?? calc.grandTotal).toLocaleString("en-IN")}*`;
 };
 
-const TiffinBillPreviewModal = ({ open, bill, onClose }) => {
+const TiffinBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => {
   const toast = useToastStore();
   const billRef = useRef(null);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
@@ -200,17 +219,23 @@ const TiffinBillPreviewModal = ({ open, bill, onClose }) => {
 
   if (!open || !bill) return null;
 
+  const isReminder = variant === "reminder";
+  const reminderCount = Number(bill.reminder_count || 0);
+
   const calc = calcTiffinBill({
     fromDate: bill.from_date,
     toDate: bill.to_date,
     ratePerDay: bill.rate_per_day,
+    quantity: bill.quantity,
     deliveryCharge: bill.delivery_charge,
     discount: bill.discount,
     excludedDates: bill.excluded_dates || [],
   });
 
   const grandTotal = Number(bill.total_amount ?? calc.grandTotal);
-  const fileBase = `Arefas-Kitchen-Tiffin-${bill.customer_name || "bill"}-${bill.from_date || "bill"}`;
+  const fileBase = isReminder
+    ? `Arefas-Kitchen-Tiffin-Reminder-${bill.customer_name || "bill"}-${reminderCount}`
+    : `Arefas-Kitchen-Tiffin-${bill.customer_name || "bill"}-${bill.from_date || "bill"}`;
 
   const captureBill = async () => {
     const node = billRef.current;
@@ -303,7 +328,11 @@ const TiffinBillPreviewModal = ({ open, bill, onClose }) => {
   const handleCopyText = async () => {
     try {
       await navigator.clipboard.writeText(
-        buildTiffinCopyText(bill, { includeExcluded: showExcludedDates })
+        buildTiffinCopyText(bill, {
+          includeExcluded: showExcludedDates,
+          isReminder,
+          reminderCount,
+        })
       );
       toast.success("Copied", "Bill text copied successfully.");
     } catch (error) {
@@ -329,7 +358,9 @@ const TiffinBillPreviewModal = ({ open, bill, onClose }) => {
         className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[92dvh] overflow-hidden animate-slide-up flex flex-col"
       >
         <div className="shrink-0 flex justify-between items-center border-b px-5 py-4">
-          <h2 className="font-bold text-xl">Tiffin Bill Preview</h2>
+          <h2 className="font-bold text-xl">
+            {isReminder ? "Reminder Preview" : "Tiffin Bill Preview"}
+          </h2>
           <button type="button" onClick={onClose} aria-label="Close">
             <X />
           </button>
@@ -339,9 +370,14 @@ const TiffinBillPreviewModal = ({ open, bill, onClose }) => {
           <div ref={billRef} style={s.bill}>
             <div style={s.inner}>
               <div style={s.center}>
+                {isReminder && (
+                  <p style={s.reminderBanner}>Reminder #{reminderCount}</p>
+                )}
                 <h1 style={s.title}>Arefa's Kitchen</h1>
                 <p style={s.subtitle}>Homemade Food</p>
-                <p style={s.badge}>Monthly Tiffin Bill</p>
+                <p style={s.badge}>
+                  {isReminder ? "Payment Reminder" : "Monthly Tiffin Bill"}
+                </p>
               </div>
 
               <div style={s.divider} />
@@ -371,6 +407,10 @@ const TiffinBillPreviewModal = ({ open, bill, onClose }) => {
                 <div style={s.row}>
                   <span style={s.label}>Dish</span>
                   <span style={s.value}>{dishLabel}</span>
+                </div>
+                <div style={s.row}>
+                  <span style={s.label}>Qty / Day</span>
+                  <span style={s.valuePlain}>{calc.quantity}</span>
                 </div>
                 <div style={s.row}>
                   <span style={s.label}>Rate / Day</span>
@@ -426,15 +466,29 @@ const TiffinBillPreviewModal = ({ open, bill, onClose }) => {
                 <div style={s.row}>
                   <span style={s.label}>Subtotal</span>
                   <span style={s.valuePlain}>
-                    {formatMoney(calc.subtotal)}
+                    {calc.billableDays}d × {calc.quantity} ×{" "}
+                    {formatMoney(bill.rate_per_day)}
                   </span>
                 </div>
                 <div style={s.row}>
-                  <span style={s.label}>Delivery</span>
+                  <span style={s.label} />
+                  <span style={s.value}>{formatMoney(calc.subtotal)}</span>
+                </div>
+                <div style={s.row}>
+                  <span style={s.label}>Delivery / Day</span>
                   <span style={s.valuePlain}>
                     {formatMoney(bill.delivery_charge)}
                   </span>
                 </div>
+                {calc.deliveryPerDay > 0 && (
+                  <div style={s.row}>
+                    <span style={s.label}>Delivery Total</span>
+                    <span style={s.valuePlain}>
+                      {calc.billableDays} × {formatMoney(calc.deliveryPerDay)} ={" "}
+                      {formatMoney(calc.deliveryCharge)}
+                    </span>
+                  </div>
+                )}
                 {Number(bill.discount) > 0 && (
                   <div style={s.row}>
                     <span style={s.label}>Discount</span>

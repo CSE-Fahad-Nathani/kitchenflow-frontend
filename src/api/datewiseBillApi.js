@@ -23,3 +23,15 @@ export const deleteDatewiseBill = async (bill_id) => {
   });
   return response.data;
 };
+
+export const markDatewiseBillPaid = async (bill_id) => {
+  const response = await api.patch("/datewise-bills/mark-paid", { bill_id });
+  return response.data;
+};
+
+export const increaseDatewiseBillReminder = async (bill_id) => {
+  const response = await api.patch("/datewise-bills/increase-reminder", {
+    bill_id,
+  });
+  return response.data;
+};

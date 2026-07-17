@@ -21,8 +21,20 @@ export const MonthlyTiffinCard = ({ bill, onClick }) => (
           <p className="text-[11px] text-gray-400 mt-1 truncate">
             {bill.dish_name}
             {bill.variant_name ? ` · ${bill.variant_name}` : ""}
+            {Number(bill.quantity) > 1 ? ` · ×${Number(bill.quantity)}` : ""}
           </p>
         )}
+        <div className="flex items-center gap-2 mt-1.5 text-[11px] font-semibold">
+          <span
+            className={bill.is_paid ? "text-green-600" : "text-red-600"}
+          >
+            {bill.is_paid ? "Paid" : "Unpaid"}
+          </span>
+          <span className="text-gray-300">·</span>
+          <span className="text-gray-500">
+            Reminder: {bill.reminder_count || 0}
+          </span>
+        </div>
       </div>
       <p className="text-[15px] font-bold text-orange-500 shrink-0">
         {money(bill.total_amount)}

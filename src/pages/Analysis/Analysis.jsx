@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
-  Loader2,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
@@ -11,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { fetchMonthlyStatistics } from "../../api/dashboardApi";
 import { formatDisplayDate, formatShortDate } from "../../utils/formatDate";
 import { useToastStore } from "../../store/toastStore";
+import { AnalysisSectionSkeleton } from "../../components/Skeleton";
 
 const MONTHS = [
   "January",
@@ -62,6 +62,30 @@ const StatTile = ({ label, value, sub }) => (
     ) : null}
   </div>
 );
+
+const RevenueSourceRow = ({ label, amount, count, countLabel, total }) => {
+  const value = Number(amount) || 0;
+  const pct = total > 0 ? Math.min(100, (value / total) * 100) : 0;
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-2 text-[12px]">
+        <span className="font-medium text-gray-700">{label}</span>
+        <span className="font-bold text-gray-900 shrink-0">{moneyExact(value)}</span>
+      </div>
+      <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-orange-400 transition-all"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="text-[10.5px] text-gray-400">
+        {num(count)} {countLabel}
+        {total > 0 ? ` · ${pct.toFixed(0)}%` : ""}
+      </p>
+    </div>
+  );
+};
 
 const GrowthPill = ({ label, value }) => {
   const n = Number(value) || 0;
@@ -269,9 +293,16 @@ const Analysis = () => {
 
       <div className="px-3.5 py-3 space-y-2.5">
         {loading ? (
-          <div className="py-20 flex flex-col items-center gap-2 text-gray-400">
-            <Loader2 size={28} className="animate-spin text-orange-400" />
-            <p className="text-[13px]">Loading analysis…</p>
+          <div className="space-y-2.5" aria-busy="true" aria-label="Loading analysis">
+            <AnalysisSectionSkeleton tiles={6} />
+            <AnalysisSectionSkeleton tiles={3} />
+            <AnalysisSectionSkeleton tiles={0} rows={3} />
+            <AnalysisSectionSkeleton tiles={2} />
+            <AnalysisSectionSkeleton tiles={3} />
+            <AnalysisSectionSkeleton tiles={3} />
+            <AnalysisSectionSkeleton tiles={3} rows={3} />
+            <AnalysisSectionSkeleton tiles={0} rows={3} />
+            <AnalysisSectionSkeleton tiles={0} rows={3} />
           </div>
         ) : !data ? (
           <div className="py-16 text-center text-[13px] text-gray-500">
@@ -279,9 +310,44 @@ const Analysis = () => {
           </div>
         ) : (
           <>
-            <Section title="Revenue Overview (Standard Bills)">
+            <Section title="Revenue Overview">
+              <div className="rounded-xl bg-orange-50 border border-orange-100 px-3 py-2.5 mb-2.5">
+                <p className="text-[10px] font-semibold text-orange-600 uppercase tracking-wider">
+                  Total Revenue
+                </p>
+                <p className="text-[20px] font-bold text-gray-900 mt-0.5">
+                  {moneyExact(revenue.total_revenue)}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-gray-100 bg-gray-50/80 px-3 py-2.5 mb-2.5 space-y-3">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                  By bill type
+                </p>
+                <RevenueSourceRow
+                  label="Standard Bills"
+                  amount={revenue.by_type?.standard_orders?.revenue}
+                  count={revenue.by_type?.standard_orders?.count}
+                  countLabel="orders"
+                  total={Number(revenue.total_revenue)}
+                />
+                <RevenueSourceRow
+                  label="Monthly Tiffin"
+                  amount={revenue.by_type?.monthly_tiffin?.revenue}
+                  count={revenue.by_type?.monthly_tiffin?.count}
+                  countLabel="bills"
+                  total={Number(revenue.total_revenue)}
+                />
+                <RevenueSourceRow
+                  label="Date-wise Bills"
+                  amount={revenue.by_type?.datewise_bills?.revenue}
+                  count={revenue.by_type?.datewise_bills?.count}
+                  countLabel="bills"
+                  total={Number(revenue.total_revenue)}
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
-                <StatTile label="Total Revenue" value={money(revenue.total_revenue)} />
                 <StatTile label="Total Orders" value={num(revenue.total_orders)} />
                 <StatTile label="Average Bill" value={money(revenue.average_bill)} />
                 <StatTile label="Highest Bill" value={money(revenue.highest_bill)} />
