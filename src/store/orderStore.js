@@ -148,9 +148,9 @@ const useOrderStore = create((set) => ({
         isEditing: true,
         editingOrderId: order.order_id,
     
-        customer: order.customer_name,
+        customer: order.customer_name || "",
         customer_id: order.customer_id,
-        mobile: order.customer_mobile,
+        mobile: order.customer_mobile || "",
 
         deliveryDate: order.delivery_datetime.split("T")[0],
         deliveryTime: order.delivery_datetime.slice(11,16),

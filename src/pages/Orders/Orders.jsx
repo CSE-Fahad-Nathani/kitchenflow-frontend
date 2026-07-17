@@ -100,7 +100,9 @@ const Orders = () => {
   } = useOrderStore();
 
   const canFinalize = items.length > 0 && !submitting;
-  const isNewCustomerCandidate = Boolean(customer.trim() && !customer_id);
+  const isNewCustomerCandidate = Boolean(
+    (customer || "").trim() && !customer_id
+  );
 
   const itemsSubtotal = useMemo(
     () => items.reduce((sum, item) => sum + Number(item.total || 0), 0),
@@ -109,8 +111,8 @@ const Orders = () => {
 
   const createCustomerFromForm = async () => {
     const response = await addCustomer({
-      name: customer.trim(),
-      mobile: mobile.trim() || "",
+      name: (customer || "").trim(),
+      mobile: (mobile || "").trim() || "",
       address: "",
       notes: "",
     });
@@ -172,7 +174,7 @@ const Orders = () => {
   };
 
   const handleAddCustomerNow = async () => {
-    if (!customer.trim() || addingCustomer) return;
+    if (!(customer || "").trim() || addingCustomer) return;
 
     try {
       setAddingCustomer(true);
@@ -181,7 +183,7 @@ const Orders = () => {
       setSaveNewCustomer(false);
       toast.success(
         "Customer added",
-        mobile.trim()
+        (mobile || "").trim()
           ? "Name and mobile saved."
           : "Customer saved with name only."
       );
@@ -267,7 +269,7 @@ const Orders = () => {
 
       if (
         saveNewCustomer &&
-        customer.trim() &&
+        (customer || "").trim() &&
         !resolvedCustomerId
       ) {
         try {
@@ -312,8 +314,8 @@ const Orders = () => {
 
       const payload = {
         customer_id: resolvedCustomerId,
-        customer_name: customer.trim() || null,
-        customer_mobile: mobile.trim() || null,
+        customer_name: (customer || "").trim() || null,
+        customer_mobile: (mobile || "").trim() || null,
         delivery_datetime: `${deliveryDate}T${deliveryTime}:00`,
         delivery_charge: Number(deliveryCharge),
         discount: Number(discount),
@@ -454,7 +456,7 @@ const Orders = () => {
                   />
                   <span className="text-[12px] font-medium text-gray-700 leading-snug">
                     Save as new customer when creating bill
-                    {!mobile.trim() && (
+                    {!(mobile || "").trim() && (
                       <span className="block text-[11px] font-normal text-gray-500">
                         Name only — add mobile above to save it too
                       </span>
