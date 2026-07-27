@@ -67,7 +67,7 @@ const OrderDetailsModal = ({
                 </h1>
                 <p className="text-gray-500 text-[11px] mt-0.5">Homemade Food</p>
                 <p className="text-orange-500 text-[10px] font-semibold mt-1.5 tracking-wide uppercase">
-                  Tax Invoice / Bill
+                  Bill
                 </p>
               </div>
 

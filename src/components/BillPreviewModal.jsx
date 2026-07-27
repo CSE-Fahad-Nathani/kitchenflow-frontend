@@ -360,7 +360,7 @@ Discount = *-₹${Number(order.discount).toLocaleString("en-IN")}/-*`
                 <h1 style={s.title}>Arefa's Kitchen</h1>
                 <p style={s.subtitle}>Homemade Food</p>
                 <p style={s.badge}>
-                  {isReminder ? "Payment Reminder" : "Tax Invoice / Bill"}
+                  {isReminder ? "Payment Reminder" : "Bill"}
                 </p>
               </div>
 
