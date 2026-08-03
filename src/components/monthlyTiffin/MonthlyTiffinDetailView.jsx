@@ -1,6 +1,6 @@
 import { Bell, Check, Loader2 } from "lucide-react";
 import { formatDisplayDate } from "../../utils/formatDate";
-import { calcTiffinBill } from "../../utils/tiffinCalc";
+import { calcTiffinBill, normalizeTiffinDishes } from "../../utils/tiffinCalc";
 
 const money = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 
@@ -23,9 +23,11 @@ const MonthlyTiffinDetailView = ({
   onPreview,
   onDelete,
   onMarkPaid,
+  onPaidExtra,
   onReminder,
   deleting,
   markingPaid,
+  payingExtra = false,
 }) => {
   if (loading) {
     return (
@@ -43,12 +45,11 @@ const MonthlyTiffinDetailView = ({
     );
   }
 
+  const dishes = normalizeTiffinDishes(bill);
   const calc = calcTiffinBill({
     fromDate: bill.from_date,
     toDate: bill.to_date,
-    ratePerDay: bill.rate_per_day,
-    quantity: bill.quantity,
-    deliveryCharge: bill.delivery_charge,
+    dishes,
     discount: bill.discount,
     excludedDates: bill.excluded_dates || [],
   });
@@ -84,11 +85,37 @@ const MonthlyTiffinDetailView = ({
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 p-3 space-y-1.5">
-        <Row label="Dish" value={bill.dish_name || "—"} strong />
-        {bill.variant_name && <Row label="Variant" value={bill.variant_name} />}
-        <Row label="Quantity / Day" value={calc.quantity} />
-        <Row label="Rate / Day" value={money(bill.rate_per_day)} />
+      <div className="bg-white rounded-xl border border-gray-100 p-3 space-y-2.5">
+        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">
+          Dishes
+        </p>
+        {dishes.length === 0 ? (
+          <p className="text-[12px] text-gray-400">No dishes</p>
+        ) : (
+          dishes.map((dish, index) => {
+            const label = dish.variant_name?.trim()
+              ? `${dish.dish_name} (${dish.variant_name})`
+              : dish.dish_name || `Dish ${index + 1}`;
+            const delivery =
+              Number(dish.delivery_charge_per_day ?? dish.delivery_charge) || 0;
+            return (
+              <div
+                key={dish.dish_entry_id || `${label}-${index}`}
+                className="space-y-1 pb-2 border-b border-gray-50 last:border-0 last:pb-0"
+              >
+                <Row label="Dish" value={label} strong />
+                <Row
+                  label="Qty / Day"
+                  value={Math.max(1, Number(dish.quantity) || 1)}
+                />
+                <Row label="Rate / Day" value={money(dish.rate_per_day)} />
+                {delivery > 0 ? (
+                  <Row label="Delivery / Day" value={money(delivery)} />
+                ) : null}
+              </div>
+            );
+          })
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 p-3 space-y-2">
@@ -120,13 +147,13 @@ const MonthlyTiffinDetailView = ({
         <Row label="Total Days" value={calc.totalDays} />
         <Row label="Excluded Days" value={calc.excludedDays} />
         <Row label="Billable Days" value={calc.billableDays} strong />
-        <Row label="Delivery / Day" value={money(bill.delivery_charge)} />
-        {calc.deliveryPerDay > 0 && (
+        {(calc.dishes || []).map((d, i) => (
           <Row
-            label="Delivery Total"
-            value={`${calc.billableDays} × ${money(calc.deliveryPerDay)} = ${money(calc.deliveryCharge)}`}
+            key={`sum-${i}`}
+            label={d.dish_name || `Dish ${i + 1}`}
+            value={money(d.subtotal + d.deliveryTotal)}
           />
-        )}
+        ))}
         {Number(bill.discount) > 0 && (
           <Row label="Discount" value={`-${money(bill.discount)}`} />
         )}
@@ -156,50 +183,79 @@ const MonthlyTiffinDetailView = ({
             </span>
           </button>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className={`grid gap-2 ${!bill.is_paid ? "grid-cols-2" : "grid-cols-3"}`}>
             {!bill.is_paid ? (
-              <button
-                type="button"
-                disabled={markingPaid}
-                onClick={onMarkPaid}
-                className="press-scale h-11 rounded-xl text-[12px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 flex items-center justify-center gap-1 disabled:opacity-60"
-              >
-                {markingPaid ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <>
-                    <Check size={14} strokeWidth={2.5} />
-                    Mark Paid
-                  </>
-                )}
-              </button>
+              <>
+                <button
+                  type="button"
+                  disabled={markingPaid || payingExtra}
+                  onClick={onMarkPaid}
+                  className="press-scale h-11 rounded-xl text-[12px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 flex items-center justify-center gap-1 disabled:opacity-60"
+                >
+                  {markingPaid ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <>
+                      <Check size={14} strokeWidth={2.5} />
+                      Mark Paid
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  disabled={markingPaid || payingExtra}
+                  onClick={onPaidExtra}
+                  className="press-scale h-11 rounded-xl text-[12px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 flex items-center justify-center gap-1 disabled:opacity-60"
+                >
+                  {payingExtra ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    "Paid Extra"
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={onPreview}
+                  className="press-scale h-11 rounded-xl text-[12px] font-semibold text-white bg-gradient-to-br from-orange-500 to-orange-600 shadow-md shadow-orange-500/25"
+                >
+                  Preview
+                </button>
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={onDelete}
+                  className="press-scale h-11 rounded-xl text-[12px] font-semibold text-rose-600 bg-rose-50 border border-rose-200 active:bg-rose-100 disabled:opacity-60"
+                >
+                  {deleting ? "…" : "Delete"}
+                </button>
+              </>
             ) : (
-              <button
-                type="button"
-                disabled
-                className="h-11 rounded-xl text-[12px] font-semibold text-emerald-700/70 bg-emerald-50/60 border border-emerald-100 flex items-center justify-center gap-1 cursor-not-allowed"
-              >
-                <Check size={14} strokeWidth={2.5} />
-                Paid
-              </button>
+              <>
+                <button
+                  type="button"
+                  disabled
+                  className="h-11 rounded-xl text-[12px] font-semibold text-emerald-700/70 bg-emerald-50/60 border border-emerald-100 flex items-center justify-center gap-1 cursor-not-allowed"
+                >
+                  <Check size={14} strokeWidth={2.5} />
+                  Paid
+                </button>
+                <button
+                  type="button"
+                  onClick={onPreview}
+                  className="press-scale h-11 rounded-xl text-[12px] font-semibold text-white bg-gradient-to-br from-orange-500 to-orange-600 shadow-md shadow-orange-500/25"
+                >
+                  Preview
+                </button>
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={onDelete}
+                  className="press-scale h-11 rounded-xl text-[12px] font-semibold text-rose-600 bg-rose-50 border border-rose-200 active:bg-rose-100 disabled:opacity-60"
+                >
+                  {deleting ? "…" : "Delete"}
+                </button>
+              </>
             )}
-
-            <button
-              type="button"
-              onClick={onPreview}
-              className="press-scale h-11 rounded-xl text-[12px] font-semibold text-white bg-gradient-to-br from-orange-500 to-orange-600 shadow-md shadow-orange-500/25"
-            >
-              Preview
-            </button>
-
-            <button
-              type="button"
-              disabled={deleting}
-              onClick={onDelete}
-              className="press-scale h-11 rounded-xl text-[12px] font-semibold text-rose-600 bg-rose-50 border border-rose-200 active:bg-rose-100 disabled:opacity-60"
-            >
-              {deleting ? "…" : "Delete"}
-            </button>
           </div>
         </div>
       </div>

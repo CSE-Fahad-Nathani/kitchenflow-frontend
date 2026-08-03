@@ -42,7 +42,7 @@ const s = {
     width: "260px",
     maxWidth: "260px",
     margin: "0 auto",
-    fontFamily: "Arial, Helvetica, sans-serif",
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif',
     color: "#111827",
     boxSizing: "border-box",
   },
@@ -247,7 +247,7 @@ const PosterPreviewModal = ({ open, special, onClose }) => {
 
         cloned.style.color = "#111827";
         cloned.style.backgroundColor = "#ffffff";
-        cloned.style.fontFamily = "Arial, Helvetica, sans-serif";
+        cloned.style.fontFamily = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif';
         cloned.style.width = "260px";
         cloned.style.maxWidth = "260px";
       },

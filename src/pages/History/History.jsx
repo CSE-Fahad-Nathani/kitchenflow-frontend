@@ -21,6 +21,13 @@ import {
   increaseDatewiseBillReminder,
   markDatewiseBillPaid,
 } from "../../api/datewiseBillApi";
+import {
+  deleteCalendarBill,
+  fetchCalendarBillById,
+  fetchCalendarBills,
+  increaseCalendarBillReminder,
+  markCalendarBillPaid,
+} from "../../api/calendarBillApi";
 import { useToastStore } from "../../store/toastStore";
 import OrderHistoryRow from "../../components/OrderHistoryRow";
 import OrderDetailsModal from "../../components/OrderDetailsModal";
@@ -31,34 +38,47 @@ import { formatDisplayDate, parseLocalDateTime } from "../../utils/formatDate";
 import BillPreviewModal from "../../components/BillPreviewModal";
 import TiffinBillPreviewModal from "../../components/monthlyTiffin/TiffinBillPreviewModal";
 import DatewiseBillPreviewModal from "../../components/datewise/DatewiseBillPreviewModal";
+import CalendarBillPreviewModal from "../../components/calendarBill/CalendarBillPreviewModal";
 import MonthlyTiffinHistoryRow from "../../components/monthlyTiffin/MonthlyTiffinHistoryRow";
 import MonthlyTiffinDetailView from "../../components/monthlyTiffin/MonthlyTiffinDetailView";
 import DatewiseBillHistoryRow from "../../components/datewise/DatewiseBillHistoryRow";
 import DatewiseBillDetailView from "../../components/datewise/DatewiseBillDetailView";
+import CalendarBillHistoryRow from "../../components/calendarBill/CalendarBillHistoryRow";
+import CalendarBillDetailView from "../../components/calendarBill/CalendarBillDetailView";
+import PaidExtraModal from "../../components/credits/PaidExtraModal";
+import { createPaidExtra } from "../../api/customerCreditApi";
 
 const History = () => {
   const [activeTab, setActiveTab] = useState("standard");
   const [orders, setOrders] = useState([]);
   const [tiffinBills, setTiffinBills] = useState([]);
   const [datewiseBills, setDatewiseBills] = useState([]);
+  const [calendarBills, setCalendarBills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [markingPaidId, setMarkingPaidId] = useState(null);
   const [markingTiffinPaidId, setMarkingTiffinPaidId] = useState(null);
   const [markingDatewisePaidId, setMarkingDatewisePaidId] = useState(null);
+  const [markingCalendarPaidId, setMarkingCalendarPaidId] = useState(null);
   const [deletingTiffin, setDeletingTiffin] = useState(false);
   const [deletingDatewise, setDeletingDatewise] = useState(false);
+  const [deletingCalendar, setDeletingCalendar] = useState(false);
+  const [paidExtraTarget, setPaidExtraTarget] = useState(null);
+  const [payingExtra, setPayingExtra] = useState(false);
 
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedTiffin, setSelectedTiffin] = useState(null);
   const [selectedDatewise, setSelectedDatewise] = useState(null);
+  const [selectedCalendar, setSelectedCalendar] = useState(null);
   const [reminderBill, setReminderBill] = useState(null);
   const [tiffinPreviewBill, setTiffinPreviewBill] = useState(null);
   const [tiffinPreviewVariant, setTiffinPreviewVariant] = useState("bill");
   const [datewisePreviewBill, setDatewisePreviewBill] = useState(null);
   const [datewisePreviewVariant, setDatewisePreviewVariant] = useState("bill");
+  const [calendarPreviewBill, setCalendarPreviewBill] = useState(null);
+  const [calendarPreviewVariant, setCalendarPreviewVariant] = useState("bill");
 
   const debouncedSearch = useDebouncedValue(search, 300);
 
@@ -71,15 +91,18 @@ const History = () => {
       if (silent) setRefreshing(true);
       else setLoading(true);
 
-      const [orderData, tiffinData, datewiseData] = await Promise.all([
-        fetchOrders(),
-        fetchMonthlyTiffinBills(),
-        fetchDatewiseBills(),
-      ]);
+      const [orderData, tiffinData, datewiseData, calendarData] =
+        await Promise.all([
+          fetchOrders(),
+          fetchMonthlyTiffinBills(),
+          fetchDatewiseBills(),
+          fetchCalendarBills(),
+        ]);
 
       setOrders(orderData || []);
       setTiffinBills(tiffinData || []);
       setDatewiseBills(datewiseData || []);
+      setCalendarBills(calendarData || []);
     } catch (error) {
       console.error(error);
       toast.error("Failed", "Unable to load history.");
@@ -162,6 +185,28 @@ const History = () => {
       });
   }, [datewiseBills, debouncedSearch, filter]);
 
+  const filteredCalendarBills = useMemo(() => {
+    const keyword = debouncedSearch.toLowerCase().trim();
+
+    return calendarBills
+      .filter((bill) => {
+        const matchesSearch =
+          keyword === "" ||
+          (bill.customer_name || "").toLowerCase().includes(keyword) ||
+          (bill.customer_mobile || "").includes(keyword);
+
+        if (!matchesSearch) return false;
+        if (filter === "paid") return bill.is_paid;
+        if (filter === "unpaid") return !bill.is_paid;
+        return true;
+      })
+      .sort((a, b) => {
+        const ta = parseLocalDateTime(a.created_at)?.getTime() || 0;
+        const tb = parseLocalDateTime(b.created_at)?.getTime() || 0;
+        return tb - ta;
+      });
+  }, [calendarBills, debouncedSearch, filter]);
+
   const formatDayLabel = (datetime) => {
     const delivery = parseLocalDateTime(datetime);
     if (!delivery) return formatDisplayDate(datetime);
@@ -234,6 +279,11 @@ const History = () => {
     [filteredDatewiseBills]
   );
 
+  const calendarByDate = useMemo(
+    () => groupBillsByDate(filteredCalendarBills, (bill) => bill.created_at),
+    [filteredCalendarBills]
+  );
+
   const standardStats = useMemo(() => {
     const total = orders.length;
     const paid = orders.filter((order) => order.is_paid).length;
@@ -264,12 +314,24 @@ const History = () => {
     return { total, paid, unpaid, pendingAmount };
   }, [datewiseBills]);
 
+  const calendarStats = useMemo(() => {
+    const total = calendarBills.length;
+    const paid = calendarBills.filter((bill) => bill.is_paid).length;
+    const unpaid = total - paid;
+    const pendingAmount = calendarBills
+      .filter((bill) => !bill.is_paid)
+      .reduce((sum, bill) => sum + Number(bill.total_amount || 0), 0);
+    return { total, paid, unpaid, pendingAmount };
+  }, [calendarBills]);
+
   const activeStats =
     activeTab === "standard"
       ? standardStats
       : activeTab === "monthly"
         ? monthlyStats
-        : datewiseStats;
+        : activeTab === "datewise"
+          ? datewiseStats
+          : calendarStats;
 
   const filterBtn = (id, label) => (
     <button
@@ -406,6 +468,20 @@ const History = () => {
     );
   };
 
+  const syncCalendarBill = (bill_id, patch) => {
+    setCalendarBills((prev) =>
+      prev.map((bill) =>
+        bill.bill_id === bill_id ? { ...bill, ...patch } : bill
+      )
+    );
+    setSelectedCalendar((prev) =>
+      prev?.bill_id === bill_id ? { ...prev, ...patch } : prev
+    );
+    setCalendarPreviewBill((prev) =>
+      prev?.bill_id === bill_id ? { ...prev, ...patch } : prev
+    );
+  };
+
   const openTiffinDetail = async (bill_id) => {
     try {
       const bill = await fetchMonthlyTiffinBillById(bill_id);
@@ -423,6 +499,16 @@ const History = () => {
     } catch (error) {
       console.error(error);
       toast.error("Failed", "Unable to load date-wise bill.");
+    }
+  };
+
+  const openCalendarDetail = async (bill_id) => {
+    try {
+      const bill = await fetchCalendarBillById(bill_id);
+      setSelectedCalendar(bill);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed", "Unable to load calendar bill.");
     }
   };
 
@@ -470,6 +556,80 @@ const History = () => {
     });
   };
 
+  const handleMarkCalendarPaid = (bill_id) => {
+    toast.confirm({
+      title: "Mark as Paid?",
+      message: "This will mark the calendar bill as paid.",
+      confirmLabel: "Mark Paid",
+      cancelLabel: "Cancel",
+      onConfirm: async () => {
+        try {
+          setMarkingCalendarPaidId(bill_id);
+          await markCalendarBillPaid(bill_id);
+          syncCalendarBill(bill_id, { is_paid: true });
+          toast.success("Marked Paid", "Payment updated successfully.");
+        } catch (error) {
+          console.error(error);
+          toast.error("Failed", "Unable to update payment.");
+        } finally {
+          setMarkingCalendarPaidId(null);
+        }
+      },
+    });
+  };
+
+  const openPaidExtra = (billType, bill) => {
+    setPaidExtraTarget({ billType, bill });
+  };
+
+  const handleConfirmPaidExtra = async ({ amount, note }) => {
+    if (!paidExtraTarget || payingExtra) return;
+    const { billType, bill } = paidExtraTarget;
+    const billId =
+      billType === "standard" ? bill.order_id : bill.bill_id;
+
+    try {
+      setPayingExtra(true);
+      await createPaidExtra({
+        bill_type: billType,
+        bill_id: billId,
+        amount,
+        note,
+        customer_id: bill.customer_id || null,
+        customer_name: bill.customer_name || "",
+        customer_mobile: bill.customer_mobile || "",
+      });
+
+      if (billType === "standard") {
+        setOrders((prev) =>
+          prev.map((order) =>
+            order.order_id === billId ? { ...order, is_paid: true } : order
+          )
+        );
+        setSelectedOrder((prev) =>
+          prev?.order_id === billId ? { ...prev, is_paid: true } : prev
+        );
+      } else if (billType === "monthly_tiffin") {
+        syncTiffinBill(billId, { is_paid: true });
+      } else if (billType === "datewise") {
+        syncDatewiseBill(billId, { is_paid: true });
+      } else if (billType === "calendar") {
+        syncCalendarBill(billId, { is_paid: true });
+      }
+
+      setPaidExtraTarget(null);
+      toast.success("Saved", "Marked paid and credit recorded.");
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        "Failed",
+        error?.response?.data?.message || "Unable to save paid extra."
+      );
+    } finally {
+      setPayingExtra(false);
+    }
+  };
+
   const handleTiffinReminder = async (bill_id) => {
     try {
       const response = await increaseMonthlyTiffinReminder(bill_id);
@@ -508,6 +668,31 @@ const History = () => {
       if (baseBill) {
         setDatewisePreviewBill({ ...baseBill, reminder_count });
         setDatewisePreviewVariant("reminder");
+      }
+
+      toast.success(
+        "Reminder ready",
+        `Reminder #${reminder_count} — download or copy to send.`
+      );
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed", "Unable to update reminder.");
+    }
+  };
+
+  const handleCalendarReminder = async (bill_id) => {
+    try {
+      const response = await increaseCalendarBillReminder(bill_id);
+      const reminder_count = response.data.reminder_count;
+      const baseBill =
+        (selectedCalendar?.bill_id === bill_id ? selectedCalendar : null) ||
+        calendarBills.find((bill) => bill.bill_id === bill_id);
+
+      syncCalendarBill(bill_id, { reminder_count });
+
+      if (baseBill) {
+        setCalendarPreviewBill({ ...baseBill, reminder_count });
+        setCalendarPreviewVariant("reminder");
       }
 
       toast.success(
@@ -563,6 +748,31 @@ const History = () => {
           toast.error("Failed", "Unable to delete bill.");
         } finally {
           setDeletingDatewise(false);
+        }
+      },
+    });
+  };
+
+  const handleDeleteCalendar = (bill_id) => {
+    toast.confirm({
+      title: "Delete bill?",
+      message: "This calendar bill will be removed permanently.",
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      onConfirm: async () => {
+        try {
+          setDeletingCalendar(true);
+          await deleteCalendarBill(bill_id);
+          setCalendarBills((prev) =>
+            prev.filter((bill) => bill.bill_id !== bill_id)
+          );
+          setSelectedCalendar(null);
+          toast.success("Deleted", "Calendar bill removed.");
+        } catch (error) {
+          console.error(error);
+          toast.error("Failed", "Unable to delete bill.");
+        } finally {
+          setDeletingCalendar(false);
         }
       },
     });
@@ -650,6 +860,7 @@ const History = () => {
             { id: "standard", label: `Standard (${standardStats.total})` },
             { id: "monthly", label: `Monthly (${monthlyStats.total})` },
             { id: "datewise", label: `Date-wise (${datewiseStats.total})` },
+            { id: "calendar", label: `Calendar (${calendarStats.total})` },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -721,7 +932,13 @@ const History = () => {
                         order={order}
                         onClick={() => setSelectedOrder(order)}
                         onMarkPaid={handleMarkPaid}
+                        onPaidExtra={(ord) => openPaidExtra("standard", ord)}
                         markingPaid={markingPaidId === order.order_id}
+                        payingExtra={
+                          payingExtra &&
+                          paidExtraTarget?.billType === "standard" &&
+                          paidExtraTarget?.bill?.order_id === order.order_id
+                        }
                       />
                     ))}
                   </div>
@@ -758,7 +975,13 @@ const History = () => {
                         bill={bill}
                         onClick={() => openTiffinDetail(bill.bill_id)}
                         onMarkPaid={handleMarkTiffinPaid}
+                        onPaidExtra={(b) => openPaidExtra("monthly_tiffin", b)}
                         markingPaid={markingTiffinPaidId === bill.bill_id}
+                        payingExtra={
+                          payingExtra &&
+                          paidExtraTarget?.billType === "monthly_tiffin" &&
+                          paidExtraTarget?.bill?.bill_id === bill.bill_id
+                        }
                       />
                     ))}
                   </div>
@@ -766,16 +989,59 @@ const History = () => {
               ))}
             </div>
           )
-        ) : filteredDatewiseBills.length === 0 ? (
+        ) : activeTab === "datewise" ? (
+          filteredDatewiseBills.length === 0 ? (
+            renderEmpty(
+              "No date-wise bills found",
+              search.trim()
+                ? "Try a different search or filter"
+                : "Date-wise bills will appear here after billing"
+            )
+          ) : (
+            <div className="space-y-4">
+              {datewiseByDate.map((group) => (
+                <div key={group.key} className="space-y-1.5">
+                  <div className="flex items-center gap-2 px-0.5 pt-1">
+                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider shrink-0">
+                      {group.label}
+                    </span>
+                    <div className="h-px flex-1 bg-gray-200" />
+                    <span className="text-[10px] font-semibold text-gray-400 shrink-0">
+                      {group.items.length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {group.items.map((bill) => (
+                      <DatewiseBillHistoryRow
+                        key={bill.bill_id}
+                        bill={bill}
+                        onClick={() => openDatewiseDetail(bill.bill_id)}
+                        onMarkPaid={handleMarkDatewisePaid}
+                        onPaidExtra={(b) => openPaidExtra("datewise", b)}
+                        markingPaid={markingDatewisePaidId === bill.bill_id}
+                        payingExtra={
+                          payingExtra &&
+                          paidExtraTarget?.billType === "datewise" &&
+                          paidExtraTarget?.bill?.bill_id === bill.bill_id
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        ) : filteredCalendarBills.length === 0 ? (
           renderEmpty(
-            "No date-wise bills found",
+            "No calendar bills found",
             search.trim()
               ? "Try a different search or filter"
-              : "Date-wise bills will appear here after billing"
+              : "Calendar bills will appear here after billing"
           )
         ) : (
           <div className="space-y-4">
-            {datewiseByDate.map((group) => (
+            {calendarByDate.map((group) => (
               <div key={group.key} className="space-y-1.5">
                 <div className="flex items-center gap-2 px-0.5 pt-1">
                   <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider shrink-0">
@@ -789,12 +1055,18 @@ const History = () => {
 
                 <div className="space-y-1.5">
                   {group.items.map((bill) => (
-                    <DatewiseBillHistoryRow
+                    <CalendarBillHistoryRow
                       key={bill.bill_id}
                       bill={bill}
-                      onClick={() => openDatewiseDetail(bill.bill_id)}
-                      onMarkPaid={handleMarkDatewisePaid}
-                      markingPaid={markingDatewisePaidId === bill.bill_id}
+                      onClick={() => openCalendarDetail(bill.bill_id)}
+                      onMarkPaid={handleMarkCalendarPaid}
+                      onPaidExtra={(b) => openPaidExtra("calendar", b)}
+                      markingPaid={markingCalendarPaidId === bill.bill_id}
+                      payingExtra={
+                        payingExtra &&
+                        paidExtraTarget?.billType === "calendar" &&
+                        paidExtraTarget?.bill?.bill_id === bill.bill_id
+                      }
                     />
                   ))}
                 </div>
@@ -809,6 +1081,10 @@ const History = () => {
         order={selectedOrder}
         onClose={() => setSelectedOrder(null)}
         onMarkPaid={handleMarkPaid}
+        onPaidExtra={(ord) => openPaidExtra("standard", ord)}
+        payingExtra={
+          payingExtra && paidExtraTarget?.billType === "standard"
+        }
         onReminder={handleReminder}
         onEdit={(order) => {
           setSelectedOrder(null);
@@ -847,12 +1123,18 @@ const History = () => {
             bill={selectedTiffin}
             deleting={deletingTiffin}
             markingPaid={markingTiffinPaidId === selectedTiffin.bill_id}
+            payingExtra={
+              payingExtra &&
+              paidExtraTarget?.billType === "monthly_tiffin" &&
+              paidExtraTarget?.bill?.bill_id === selectedTiffin.bill_id
+            }
             onPreview={() => {
               setTiffinPreviewBill(selectedTiffin);
               setTiffinPreviewVariant("bill");
             }}
             onDelete={() => handleDeleteTiffin(selectedTiffin.bill_id)}
             onMarkPaid={() => handleMarkTiffinPaid(selectedTiffin.bill_id)}
+            onPaidExtra={() => openPaidExtra("monthly_tiffin", selectedTiffin)}
             onReminder={() => handleTiffinReminder(selectedTiffin.bill_id)}
           />
         </div>
@@ -891,12 +1173,18 @@ const History = () => {
             bill={selectedDatewise}
             deleting={deletingDatewise}
             markingPaid={markingDatewisePaidId === selectedDatewise.bill_id}
+            payingExtra={
+              payingExtra &&
+              paidExtraTarget?.billType === "datewise" &&
+              paidExtraTarget?.bill?.bill_id === selectedDatewise.bill_id
+            }
             onPreview={() => {
               setDatewisePreviewBill(selectedDatewise);
               setDatewisePreviewVariant("bill");
             }}
             onDelete={() => handleDeleteDatewise(selectedDatewise.bill_id)}
             onMarkPaid={() => handleMarkDatewisePaid(selectedDatewise.bill_id)}
+            onPaidExtra={() => openPaidExtra("datewise", selectedDatewise)}
             onReminder={() => handleDatewiseReminder(selectedDatewise.bill_id)}
           />
         </div>
@@ -910,6 +1198,67 @@ const History = () => {
           setDatewisePreviewBill(null);
           setDatewisePreviewVariant("bill");
         }}
+      />
+
+      {selectedCalendar ? (
+        <div className="fixed inset-0 z-[9999] bg-gray-50 overflow-y-auto">
+          <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-gray-100 px-3.5 py-3 flex items-center justify-between">
+            <div>
+              <p className="text-[15px] font-bold text-gray-900">Calendar Bill</p>
+              <p className="text-[12px] text-gray-500">
+                {selectedCalendar.customer_name || "Details"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedCalendar(null)}
+              className="press-scale px-3 py-1.5 rounded-lg bg-gray-100 text-[12px] font-semibold text-gray-700"
+            >
+              Close
+            </button>
+          </div>
+
+          <CalendarBillDetailView
+            loading={false}
+            bill={selectedCalendar}
+            deleting={deletingCalendar}
+            markingPaid={markingCalendarPaidId === selectedCalendar.bill_id}
+            payingExtra={
+              payingExtra &&
+              paidExtraTarget?.billType === "calendar" &&
+              paidExtraTarget?.bill?.bill_id === selectedCalendar.bill_id
+            }
+            onPreview={() => {
+              setCalendarPreviewBill(selectedCalendar);
+              setCalendarPreviewVariant("bill");
+            }}
+            onDelete={() => handleDeleteCalendar(selectedCalendar.bill_id)}
+            onMarkPaid={() => handleMarkCalendarPaid(selectedCalendar.bill_id)}
+            onPaidExtra={() => openPaidExtra("calendar", selectedCalendar)}
+            onReminder={() => handleCalendarReminder(selectedCalendar.bill_id)}
+          />
+        </div>
+      ) : null}
+
+      <CalendarBillPreviewModal
+        open={!!calendarPreviewBill}
+        bill={calendarPreviewBill}
+        variant={calendarPreviewVariant}
+        onClose={() => {
+          setCalendarPreviewBill(null);
+          setCalendarPreviewVariant("bill");
+        }}
+      />
+
+      <PaidExtraModal
+        open={!!paidExtraTarget}
+        customerName={paidExtraTarget?.bill?.customer_name || ""}
+        billTotal={paidExtraTarget?.bill?.total_amount}
+        submitting={payingExtra}
+        onClose={() => {
+          if (!payingExtra) setPaidExtraTarget(null);
+        }}
+        onConfirm={handleConfirmPaidExtra}
       />
     </div>
   );

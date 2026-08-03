@@ -11,8 +11,12 @@ import {
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { useToastStore } from "../../store/toastStore";
-import { formatDisplayDate, formatShortDate } from "../../utils/formatDate";
-import { calcTiffinBill } from "../../utils/tiffinCalc";
+import { formatShortDate } from "../../utils/formatDate";
+import {
+  calcTiffinBill,
+  groupExcludedByMonth,
+  normalizeTiffinDishes,
+} from "../../utils/tiffinCalc";
 
 const formatMoney = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN")}`;
@@ -24,30 +28,30 @@ const s = {
     width: "100%",
     maxWidth: "340px",
     margin: "0 auto",
-    fontFamily: "Arial, Helvetica, sans-serif",
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif',
     color: "#111827",
     boxSizing: "border-box",
   },
   inner: {
-    padding: "24px 20px 20px",
+    padding: "18px 16px 16px",
     boxSizing: "border-box",
   },
   center: { textAlign: "center" },
   title: {
     margin: 0,
-    fontSize: "22px",
+    fontSize: "20px",
     fontWeight: 700,
     color: "#111827",
     letterSpacing: "-0.02em",
   },
   subtitle: {
-    margin: "4px 0 0",
-    fontSize: "12px",
+    margin: "2px 0 0",
+    fontSize: "11px",
     color: "#6b7280",
   },
   badge: {
-    margin: "8px 0 0",
-    fontSize: "11px",
+    margin: "6px 0 0",
+    fontSize: "10px",
     fontWeight: 600,
     color: "#f97316",
     letterSpacing: "0.06em",
@@ -55,42 +59,75 @@ const s = {
   },
   divider: {
     borderTop: "1px dashed #d1d5db",
-    margin: "16px 0",
+    margin: "10px 0",
+  },
+  hairline: {
+    borderTop: "1px solid #f3f4f6",
+    margin: "3px 0",
   },
   dividerSolid: {
     borderTop: "1px solid #e5e7eb",
     margin: "8px 0 0",
-    paddingTop: "12px",
+    paddingTop: "10px",
   },
-  meta: {
-    fontSize: "13px",
-    color: "#374151",
-  },
+  meta: { fontSize: "12px", color: "#374151" },
   row: {
     display: "flex",
     justifyContent: "space-between",
-    gap: "12px",
-    marginBottom: "6px",
+    gap: "10px",
+    marginBottom: "3px",
   },
   label: { color: "#6b7280" },
   value: { fontWeight: 600, color: "#111827", textAlign: "right" },
   valuePlain: { color: "#111827", textAlign: "right" },
-  totalLabel: {
-    fontSize: "16px",
+  dishBlock: {
+    padding: "4px 0",
+  },
+  dishTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    gap: "8px",
+    marginBottom: "2px",
+  },
+  dishHeading: {
+    margin: 0,
+    fontSize: "12px",
     fontWeight: 700,
     color: "#111827",
+    minWidth: 0,
+    flex: 1,
   },
-  totalValue: {
-    fontSize: "20px",
-    fontWeight: 700,
-    color: "#f97316",
-  },
-  footer: {
+  dishAmt: {
     margin: 0,
-    textAlign: "center",
-    fontSize: "11px",
+    fontSize: "12.5px",
+    fontWeight: 800,
+    color: "#ea580c",
+    whiteSpace: "nowrap",
+  },
+  itemLine: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    gap: "8px",
+    marginTop: "1px",
+    paddingLeft: "6px",
+  },
+  itemLeft: {
+    margin: 0,
+    fontSize: "10px",
+    color: "#6b7280",
+    lineHeight: 1.25,
+    minWidth: 0,
+    flex: 1,
+  },
+  itemRight: {
+    margin: 0,
+    fontSize: "10px",
+    fontWeight: 500,
     color: "#9ca3af",
-    lineHeight: 1.6,
+    whiteSpace: "nowrap",
+    flexShrink: 0,
   },
   sectionTitle: {
     margin: "0 0 4px",
@@ -100,35 +137,41 @@ const s = {
     textTransform: "uppercase",
     letterSpacing: "0.05em",
   },
-  excludedRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "baseline",
-    gap: "8px",
-    marginBottom: "2px",
-    fontSize: "11px",
-    lineHeight: 1.25,
+  excludedLine: {
+    margin: "0 0 2px",
+    fontSize: "10px",
+    color: "#6b7280",
+    lineHeight: 1.35,
   },
-  excludedDate: {
-    fontWeight: 600,
+  excludedMonth: {
+    fontWeight: 700,
+    color: "#374151",
+  },
+  totalLabel: {
+    fontSize: "15px",
+    fontWeight: 700,
     color: "#111827",
   },
-  excludedReason: {
-    color: "#6b7280",
-    textAlign: "right",
+  totalValue: {
+    fontSize: "18px",
+    fontWeight: 700,
+    color: "#f97316",
   },
-  excludedDivider: {
-    borderTop: "1px dashed #d1d5db",
-    margin: "10px 0",
+  footer: {
+    margin: 0,
+    textAlign: "center",
+    fontSize: "10px",
+    color: "#9ca3af",
+    lineHeight: 1.5,
   },
   reminderBanner: {
-    margin: "0 0 10px",
-    padding: "8px 10px",
+    margin: "0 0 8px",
+    padding: "5px 8px",
     backgroundColor: "#fff7ed",
     border: "1px solid #fed7aa",
-    borderRadius: "8px",
+    borderRadius: "6px",
     textAlign: "center",
-    fontSize: "14px",
+    fontSize: "12px",
     fontWeight: 800,
     color: "#ea580c",
     letterSpacing: "0.04em",
@@ -136,8 +179,10 @@ const s = {
   },
 };
 
-const getExcludedList = (bill) =>
-  (bill.excluded_dates || []).filter((row) => row?.excluded_date);
+const dishLabel = (d, index = 0) => {
+  const name = d.dish_name || `Dish ${index + 1}`;
+  return d.variant_name?.trim() ? `${name} (${d.variant_name.trim()})` : name;
+};
 
 export const buildTiffinCopyText = (
   bill,
@@ -155,19 +200,29 @@ export const buildTiffinCopyText = (
     customerLine = `${customerMobile}\n`;
   }
 
+  const dishes = normalizeTiffinDishes(bill);
   const calc = calcTiffinBill({
     fromDate: bill.from_date,
     toDate: bill.to_date,
-    ratePerDay: bill.rate_per_day,
-    quantity: bill.quantity,
-    deliveryCharge: bill.delivery_charge,
+    dishes,
     discount: bill.discount,
     excludedDates: bill.excluded_dates || [],
   });
 
-  const dishLine = bill.variant_name?.trim()
-    ? `${bill.dish_name} (${bill.variant_name})`
-    : bill.dish_name;
+  const dishesBlock = (calc.dishes || [])
+    .map((d, i) => {
+      const lines = [
+        `${dishLabel(d, i)} = *₹${Number(d.subtotal + d.deliveryTotal).toLocaleString("en-IN")}*`,
+        `  ${d.quantity}×₹${Number(d.rate_per_day).toLocaleString("en-IN")}/day · ${calc.billableDays}d`,
+      ];
+      if (d.deliveryPerDay > 0) {
+        lines.push(
+          `  Delivery = ₹${Number(d.deliveryTotal).toLocaleString("en-IN")}`
+        );
+      }
+      return lines.join("\n");
+    })
+    .join("\n");
 
   const discountLine =
     Number(bill.discount) > 0
@@ -175,18 +230,14 @@ export const buildTiffinCopyText = (
 Discount = *-₹${Number(bill.discount).toLocaleString("en-IN")}*`
       : "";
 
-  const excluded = getExcludedList(bill);
   let excludedBlock = "";
-  if (includeExcluded && excluded.length > 0) {
-    const lines = excluded
-      .map((row) => {
-        const date = formatShortDate(row.excluded_date);
-        const reason = row.reason?.trim();
-        return reason ? `${date} — ${reason}` : date;
-      })
+  if (includeExcluded && calc.excludedDays > 0) {
+    const groups = groupExcludedByMonth(bill.excluded_dates || []);
+    const lines = groups
+      .map((g) => `${g.label}: ${g.daysText}`)
       .join("\n");
     excludedBlock = `
-Excluded Dates:
+Excluded:
 ${lines}
 `;
   }
@@ -195,18 +246,10 @@ ${lines}
 
 ${customerLine}${formatShortDate(bill.from_date)} - ${formatShortDate(bill.to_date)}
 
-${dishLine}
+${dishesBlock}
 
-Quantity / Day = ${calc.quantity}
-Rate Per Day = *₹${Number(bill.rate_per_day).toLocaleString("en-IN")}*
-
-Total Days = ${calc.totalDays}
-Excluded Days = ${calc.excludedDays}
-Billable Days = ${calc.billableDays}
-${excludedBlock}
-Delivery / Day = *₹${Number(bill.delivery_charge || 0).toLocaleString("en-IN")}*
-Delivery Total = *₹${Number(calc.deliveryCharge || 0).toLocaleString("en-IN")}*${discountLine}
-
+Days ${calc.totalDays} · Excluded ${calc.excludedDays} · Billable ${calc.billableDays}
+${excludedBlock}${discountLine}
 *Total = ₹${Number(bill.total_amount ?? calc.grandTotal).toLocaleString("en-IN")}*`;
 };
 
@@ -215,19 +258,18 @@ const TiffinBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => {
   const billRef = useRef(null);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [exporting, setExporting] = useState(null);
-  const [showExcludedDates, setShowExcludedDates] = useState(false);
+  const [showExcludedDates, setShowExcludedDates] = useState(true);
 
   if (!open || !bill) return null;
 
   const isReminder = variant === "reminder";
   const reminderCount = Number(bill.reminder_count || 0);
 
+  const dishes = normalizeTiffinDishes(bill);
   const calc = calcTiffinBill({
     fromDate: bill.from_date,
     toDate: bill.to_date,
-    ratePerDay: bill.rate_per_day,
-    quantity: bill.quantity,
-    deliveryCharge: bill.delivery_charge,
+    dishes,
     discount: bill.discount,
     excludedDates: bill.excluded_dates || [],
   });
@@ -237,12 +279,15 @@ const TiffinBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => {
     ? `Arefas-Kitchen-Tiffin-Reminder-${bill.customer_name || "bill"}-${reminderCount}`
     : `Arefas-Kitchen-Tiffin-${bill.customer_name || "bill"}-${bill.from_date || "bill"}`;
 
+  const excludedGroups = groupExcludedByMonth(bill.excluded_dates || []);
+  const hasExcluded = excludedGroups.length > 0;
+
   const captureBill = async () => {
     const node = billRef.current;
     if (!node) throw new Error("Bill not ready");
 
     return html2canvas(node, {
-      scale: 2,
+      scale: 4,
       useCORS: true,
       backgroundColor: "#ffffff",
       logging: false,
@@ -253,7 +298,7 @@ const TiffinBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => {
 
         cloned.style.color = "#111827";
         cloned.style.backgroundColor = "#ffffff";
-        cloned.style.fontFamily = "Arial, Helvetica, sans-serif";
+        cloned.style.fontFamily = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif';
       },
     });
   };
@@ -341,13 +386,6 @@ const TiffinBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => {
     }
   };
 
-  const dishLabel = bill.variant_name?.trim()
-    ? `${bill.dish_name} (${bill.variant_name})`
-    : bill.dish_name;
-
-  const excludedList = getExcludedList(bill);
-  const hasExcluded = excludedList.length > 0;
-
   return (
     <div
       className="fixed inset-0 z-[10000] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4"
@@ -376,7 +414,7 @@ const TiffinBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => {
                 <h1 style={s.title}>Arefa's Kitchen</h1>
                 <p style={s.subtitle}>Homemade Food</p>
                 <p style={s.badge}>
-                  {isReminder ? "Payment Reminder" : "Monthly Tiffin Bill"}
+                  {isReminder ? "Payment Reminder" : "Bill"}
                 </p>
               </div>
 
@@ -400,95 +438,70 @@ const TiffinBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => {
                 <div style={s.row}>
                   <span style={s.label}>Period</span>
                   <span style={s.valuePlain}>
-                    {formatDisplayDate(bill.from_date)} →{" "}
-                    {formatDisplayDate(bill.to_date)}
+                    {formatShortDate(bill.from_date)} →{" "}
+                    {formatShortDate(bill.to_date)}
                   </span>
                 </div>
                 <div style={s.row}>
-                  <span style={s.label}>Dish</span>
-                  <span style={s.value}>{dishLabel}</span>
-                </div>
-                <div style={s.row}>
-                  <span style={s.label}>Qty / Day</span>
-                  <span style={s.valuePlain}>{calc.quantity}</span>
-                </div>
-                <div style={s.row}>
-                  <span style={s.label}>Rate / Day</span>
+                  <span style={s.label}>Days</span>
                   <span style={s.valuePlain}>
-                    {formatMoney(bill.rate_per_day)}
+                    {calc.billableDays} billable
+                    {calc.excludedDays > 0
+                      ? ` · ${calc.excludedDays} off`
+                      : ""}
                   </span>
                 </div>
               </div>
 
               <div style={s.divider} />
 
-              <div style={s.meta}>
-                <div style={s.row}>
-                  <span style={s.label}>Total Days</span>
-                  <span style={s.valuePlain}>{calc.totalDays}</span>
-                </div>
-                <div style={s.row}>
-                  <span style={s.label}>Excluded Days</span>
-                  <span style={s.valuePlain}>{calc.excludedDays}</span>
-                </div>
-                <div style={s.row}>
-                  <span style={s.label}>Billable Days</span>
-                  <span style={s.value}>{calc.billableDays}</span>
-                </div>
-              </div>
-
-              {showExcludedDates && hasExcluded && (
-                <>
-                  <div style={s.excludedDivider} />
-                  <p style={s.sectionTitle}>Excluded Dates</p>
-                  {excludedList.map((row) => {
-                    const reason = row.reason?.trim();
-                    return (
-                      <div
-                        key={row.excluded_id || row.excluded_date}
-                        style={s.excludedRow}
-                      >
-                        <span style={s.excludedDate}>
-                          {formatShortDate(row.excluded_date)}
-                        </span>
-                        {reason ? (
-                          <span style={s.excludedReason}>{reason}</span>
-                        ) : null}
+              {(calc.dishes || []).map((d, i) => (
+                <div key={`dish-${i}`}>
+                  {i > 0 ? <div style={s.hairline} /> : null}
+                  <div style={s.dishBlock}>
+                    <div style={s.dishTop}>
+                      <p style={s.dishHeading}>{dishLabel(d, i)}</p>
+                      <p style={s.dishAmt}>
+                        {formatMoney(d.subtotal + d.deliveryTotal)}
+                      </p>
+                    </div>
+                    <div style={s.itemLine}>
+                      <p style={s.itemLeft}>
+                        {d.quantity}×{formatMoney(d.rate_per_day)}/day ·{" "}
+                        {calc.billableDays}d
+                      </p>
+                      <p style={s.itemRight}>{formatMoney(d.subtotal)}</p>
+                    </div>
+                    {d.deliveryPerDay > 0 ? (
+                      <div style={s.itemLine}>
+                        <p style={s.itemLeft}>
+                          Delivery {formatMoney(d.deliveryPerDay)}/day
+                        </p>
+                        <p style={s.itemRight}>
+                          {formatMoney(d.deliveryTotal)}
+                        </p>
                       </div>
-                    );
-                  })}
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+
+              {showExcludedDates && hasExcluded ? (
+                <>
+                  <div style={s.divider} />
+                  <p style={s.sectionTitle}>Excluded</p>
+                  {excludedGroups.map((g) => (
+                    <p key={g.key} style={s.excludedLine}>
+                      <span style={s.excludedMonth}>{g.label}:</span>{" "}
+                      {g.daysText}
+                    </p>
+                  ))}
                 </>
-              )}
+              ) : null}
 
               <div style={s.divider} />
 
               <div style={s.meta}>
-                <div style={s.row}>
-                  <span style={s.label}>Subtotal</span>
-                  <span style={s.valuePlain}>
-                    {calc.billableDays}d × {calc.quantity} ×{" "}
-                    {formatMoney(bill.rate_per_day)}
-                  </span>
-                </div>
-                <div style={s.row}>
-                  <span style={s.label} />
-                  <span style={s.value}>{formatMoney(calc.subtotal)}</span>
-                </div>
-                <div style={s.row}>
-                  <span style={s.label}>Delivery / Day</span>
-                  <span style={s.valuePlain}>
-                    {formatMoney(bill.delivery_charge)}
-                  </span>
-                </div>
-                {calc.deliveryPerDay > 0 && (
-                  <div style={s.row}>
-                    <span style={s.label}>Delivery Total</span>
-                    <span style={s.valuePlain}>
-                      {calc.billableDays} × {formatMoney(calc.deliveryPerDay)} ={" "}
-                      {formatMoney(calc.deliveryCharge)}
-                    </span>
-                  </div>
-                )}
                 {Number(bill.discount) > 0 && (
                   <div style={s.row}>
                     <span style={s.label}>Discount</span>
@@ -511,7 +524,7 @@ const TiffinBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => {
                 </div>
               </div>
 
-              <div style={{ ...s.divider, marginTop: 20 }} />
+              <div style={{ ...s.divider, marginTop: 14 }} />
 
               <p style={s.footer}>
                 Thank you for your order!
@@ -538,62 +551,62 @@ const TiffinBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => {
           )}
 
           <div className="flex gap-3 relative">
-          <div className="relative flex-1">
+            <div className="relative flex-1">
+              <button
+                type="button"
+                disabled={!!exporting}
+                onClick={() => setShowDownloadMenu((prev) => !prev)}
+                className="w-full border border-gray-200 rounded-xl py-3 font-semibold text-gray-800 flex items-center justify-center gap-2 active:scale-[0.98] transition disabled:opacity-60"
+              >
+                {exporting ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <Download size={16} />
+                    Download
+                    <ChevronUp
+                      size={14}
+                      className={`text-gray-400 transition ${
+                        showDownloadMenu ? "" : "rotate-180"
+                      }`}
+                    />
+                  </>
+                )}
+              </button>
+
+              {showDownloadMenu && !exporting && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-10">
+                  <button
+                    type="button"
+                    onClick={handleDownloadImage}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium active:bg-orange-50 border-b border-gray-100"
+                  >
+                    <ImageIcon size={16} className="text-orange-500" />
+                    Download as Image
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadPdf}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium active:bg-orange-50"
+                  >
+                    <FileText size={16} className="text-orange-500" />
+                    Download as PDF
+                  </button>
+                </div>
+              )}
+            </div>
+
             <button
               type="button"
-              disabled={!!exporting}
-              onClick={() => setShowDownloadMenu((prev) => !prev)}
-              className="w-full border border-gray-200 rounded-xl py-3 font-semibold text-gray-800 flex items-center justify-center gap-2 active:scale-[0.98] transition disabled:opacity-60"
+              onClick={handleCopyText}
+              className="flex-1 bg-orange-500 text-white rounded-xl py-3 font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition"
             >
-              {exporting ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                <>
-                  <Download size={16} />
-                  Download
-                  <ChevronUp
-                    size={14}
-                    className={`text-gray-400 transition ${
-                      showDownloadMenu ? "" : "rotate-180"
-                    }`}
-                  />
-                </>
-              )}
+              <Copy size={16} />
+              Copy Text
             </button>
-
-            {showDownloadMenu && !exporting && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-10">
-                <button
-                  type="button"
-                  onClick={handleDownloadImage}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium active:bg-orange-50 border-b border-gray-100"
-                >
-                  <ImageIcon size={16} className="text-orange-500" />
-                  Download as Image
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDownloadPdf}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium active:bg-orange-50"
-                >
-                  <FileText size={16} className="text-orange-500" />
-                  Download as PDF
-                </button>
-              </div>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={handleCopyText}
-            className="flex-1 bg-orange-500 text-white rounded-xl py-3 font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition"
-          >
-            <Copy size={16} />
-            Copy Text
-          </button>
           </div>
         </div>
       </div>

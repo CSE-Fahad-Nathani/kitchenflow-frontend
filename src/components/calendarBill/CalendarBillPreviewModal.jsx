@@ -13,14 +13,47 @@ import { jsPDF } from "jspdf";
 import { useToastStore } from "../../store/toastStore";
 import { formatShortDate } from "../../utils/formatDate";
 import {
-  calcDatewiseBill,
-  calcDayTotals,
-  itemLineTotal,
-} from "../../utils/datewiseCalc";
+  buildCalendarBillText,
+  calcCalendarBill,
+  calcDishTotals,
+  groupDatesByMonth,
+} from "../../utils/calendarBillCalc";
 
 const formatMoney = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN")}`;
 
+const MONTH_FULL = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+/** Compact month lines: "August: 1, 2, 5" (year only if spanning years). */
+const formatDateGroups = (dates = []) => {
+  const groups = groupDatesByMonth(dates);
+  if (groups.length === 0) return [];
+  const years = new Set(groups.map((g) => g.key.slice(0, 4)));
+  const includeYear = years.size > 1;
+
+  return groups.map((g) => {
+    const [y, m] = g.key.split("-").map(Number);
+    const label = includeYear
+      ? `${MONTH_FULL[m - 1]} ${y}`
+      : MONTH_FULL[m - 1];
+    return { key: g.key, text: `${label}: ${g.days.join(", ")}` };
+  });
+};
+
+/** hex-only styles — html2canvas cannot parse Tailwind v4 oklch() colors */
 const s = {
   bill: {
     backgroundColor: "#ffffff",
@@ -56,6 +89,19 @@ const s = {
     letterSpacing: "0.06em",
     textTransform: "uppercase",
   },
+  reminderBanner: {
+    margin: "0 0 8px",
+    padding: "5px 8px",
+    backgroundColor: "#fff7ed",
+    border: "1px solid #fed7aa",
+    borderRadius: "6px",
+    textAlign: "center",
+    fontSize: "12px",
+    fontWeight: 800,
+    color: "#ea580c",
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+  },
   divider: {
     borderTop: "1px dashed #d1d5db",
     margin: "10px 0",
@@ -79,23 +125,25 @@ const s = {
   label: { color: "#6b7280" },
   value: { fontWeight: 600, color: "#111827", textAlign: "right" },
   valuePlain: { color: "#111827", textAlign: "right" },
-  dayBlock: {
+  dishBlock: {
     padding: "4px 0",
   },
-  dayTop: {
+  dishTop: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "baseline",
     gap: "8px",
     marginBottom: "2px",
   },
-  dateHeading: {
+  dishHeading: {
     margin: 0,
     fontSize: "12px",
     fontWeight: 700,
     color: "#111827",
+    minWidth: 0,
+    flex: 1,
   },
-  dayAmt: {
+  dishAmt: {
     margin: 0,
     fontSize: "12.5px",
     fontWeight: 800,
@@ -126,6 +174,17 @@ const s = {
     whiteSpace: "nowrap",
     flexShrink: 0,
   },
+  dateLine: {
+    margin: "2px 0 0",
+    paddingLeft: "6px",
+    fontSize: "10px",
+    color: "#6b7280",
+    lineHeight: 1.35,
+  },
+  dateMonth: {
+    fontWeight: 700,
+    color: "#374151",
+  },
   totalLabel: {
     fontSize: "15px",
     fontWeight: 700,
@@ -143,93 +202,9 @@ const s = {
     color: "#9ca3af",
     lineHeight: 1.5,
   },
-  reminderBanner: {
-    margin: "0 0 8px",
-    padding: "5px 8px",
-    backgroundColor: "#fff7ed",
-    border: "1px solid #fed7aa",
-    borderRadius: "6px",
-    textAlign: "center",
-    fontSize: "12px",
-    fontWeight: 800,
-    color: "#ea580c",
-    letterSpacing: "0.04em",
-    textTransform: "uppercase",
-  },
 };
 
-const itemLabel = (item) => {
-  const name = item.dish_name || "Item";
-  return item.variant_name?.trim()
-    ? `${name} (${item.variant_name.trim()})`
-    : name;
-};
-
-const itemLeftText = (item) => {
-  const qty = Number(item.quantity) || 0;
-  return qty ? `${itemLabel(item)} ×${qty}` : itemLabel(item);
-};
-
-export const buildDatewiseCopyText = (
-  bill,
-  { isReminder = false, reminderCount = 0 } = {}
-) => {
-  const customerName = bill.customer_name?.trim();
-  const customerMobile = bill.customer_mobile?.trim();
-
-  let customerLine = "";
-  if (customerName && customerMobile) {
-    customerLine = `${customerName} (${customerMobile})\n`;
-  } else if (customerName) {
-    customerLine = `${customerName}\n`;
-  } else if (customerMobile) {
-    customerLine = `${customerMobile}\n`;
-  }
-
-  const days = bill.days || [];
-  const dayBlocks = days
-    .map((day) => {
-      const dayCalc = calcDayTotals(day);
-      const lines = [
-        `${formatShortDate(day.bill_date)} = *₹${dayCalc.dayTotal.toLocaleString("en-IN")}/-*`,
-        ...(day.items || []).map(
-          (item) =>
-            `  ${itemLeftText(item)} = ₹${itemLineTotal(item).toLocaleString("en-IN")}/-`
-        ),
-      ];
-
-      if (Number(day.delivery_charge) > 0) {
-        lines.push(
-          `  Delivery = ₹${Number(day.delivery_charge).toLocaleString("en-IN")}/-`
-        );
-      }
-
-      if (day.note?.trim()) {
-        lines.push(`  ${day.note.trim()}`);
-      }
-
-      return lines.join("\n");
-    })
-    .join("\n");
-
-  const discountLine =
-    Number(bill.discount) > 0
-      ? `
-Discount = *-₹${Number(bill.discount).toLocaleString("en-IN")}/-*`
-      : "";
-
-  const calc = calcDatewiseBill(days, bill.discount);
-  const total = Number(bill.total_amount ?? calc.grandTotal);
-
-  return `${isReminder ? `*REMINDER #${reminderCount}*\n\n` : ""}*Arefa's Kitchen*
-
-${customerLine}
-${dayBlocks}${discountLine}
-
-*Total = ₹${total.toLocaleString("en-IN")}/-*`;
-};
-
-const DatewiseBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => {
+const CalendarBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => {
   const toast = useToastStore();
   const billRef = useRef(null);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
@@ -239,13 +214,14 @@ const DatewiseBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => 
 
   const isReminder = variant === "reminder";
   const reminderCount = Number(bill.reminder_count || 0);
-
-  const days = bill.days || [];
-  const calc = calcDatewiseBill(days, bill.discount);
+  const dishes = bill.dishes || [];
+  const calc = calcCalendarBill(dishes);
   const grandTotal = Number(bill.total_amount ?? calc.grandTotal);
+  const showDates = Boolean(bill.show_dates);
+
   const fileBase = isReminder
-    ? `Arefas-Kitchen-Datewise-Reminder-${bill.customer_name || "bill"}-${reminderCount}`
-    : `Arefas-Kitchen-Datewise-${bill.customer_name || "bill"}`;
+    ? `Arefas-Kitchen-Calendar-Reminder-${bill.customer_name || "bill"}-${reminderCount}`
+    : `Arefas-Kitchen-Calendar-${bill.customer_name || "bill"}`;
 
   const captureBill = async () => {
     const node = billRef.current;
@@ -281,9 +257,7 @@ const DatewiseBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => 
     try {
       setExporting("image");
       setShowDownloadMenu(false);
-
       const canvas = await captureBill();
-
       await new Promise((resolve, reject) => {
         canvas.toBlob((blob) => {
           if (!blob) {
@@ -294,7 +268,6 @@ const DatewiseBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => 
           resolve();
         }, "image/png");
       });
-
       toast.success("Downloaded", "Bill saved as image.");
     } catch (error) {
       console.error(error);
@@ -308,24 +281,17 @@ const DatewiseBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => 
     try {
       setExporting("pdf");
       setShowDownloadMenu(false);
-
       const canvas = await captureBill();
       const imgData = canvas.toDataURL("image/png");
-
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
       const pdfWidth = 80;
-      const pdfHeight = (imgHeight * pdfWidth) / imgWidth;
-
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       const pdf = new jsPDF({
         orientation: pdfHeight > pdfWidth ? "portrait" : "landscape",
         unit: "mm",
         format: [pdfWidth, pdfHeight],
       });
-
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
       pdf.save(`${fileBase}.pdf`);
-
       toast.success("Downloaded", "Bill saved as PDF.");
     } catch (error) {
       console.error(error);
@@ -337,8 +303,9 @@ const DatewiseBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => 
 
   const handleCopyText = async () => {
     try {
+      const prefix = isReminder ? `*REMINDER #${reminderCount}*\n\n` : "";
       await navigator.clipboard.writeText(
-        buildDatewiseCopyText(bill, { isReminder, reminderCount })
+        prefix + buildCalendarBillText(bill, calc)
       );
       toast.success("Copied", "Bill text copied successfully.");
     } catch (error) {
@@ -358,7 +325,7 @@ const DatewiseBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => 
       >
         <div className="shrink-0 flex justify-between items-center border-b px-5 py-4">
           <h2 className="font-bold text-xl">
-            {isReminder ? "Reminder Preview" : "Date-wise Bill Preview"}
+            {isReminder ? "Reminder Preview" : "Calendar Bill Preview"}
           </h2>
           <button type="button" onClick={onClose} aria-label="Close">
             <X />
@@ -396,53 +363,63 @@ const DatewiseBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => 
                     </span>
                   </div>
                 )}
-                <div style={s.row}>
-                  <span style={s.label}>Days</span>
-                  <span style={s.valuePlain}>{days.length}</span>
-                </div>
+                {calc.fromDate && calc.toDate ? (
+                  <div style={s.row}>
+                    <span style={s.label}>Period</span>
+                    <span style={s.valuePlain}>
+                      {formatShortDate(calc.fromDate)} →{" "}
+                      {formatShortDate(calc.toDate)}
+                    </span>
+                  </div>
+                ) : null}
               </div>
 
               <div style={s.divider} />
 
-              {days.map((day, idx) => {
-                const dayCalc = calcDayTotals(day);
+              {dishes.map((dish, idx) => {
+                const summary = calc.dishSummaries[idx] || calcDishTotals(dish);
+                const delivery = Number(dish.delivery_charge_per_day) || 0;
+                const dateGroups = showDates
+                  ? formatDateGroups(summary.dates)
+                  : [];
+
                 return (
-                  <div key={day.day_id || day.localId || day.bill_date || idx}>
+                  <div key={dish.dish_entry_id || dish.localId || idx}>
                     {idx > 0 ? <div style={s.hairline} /> : null}
-                    <div style={s.dayBlock}>
-                      <div style={s.dayTop}>
-                        <p style={s.dateHeading}>
-                          {formatShortDate(day.bill_date)}
+                    <div style={s.dishBlock}>
+                      <div style={s.dishTop}>
+                        <p style={s.dishHeading}>
+                          {dish.dish_name || `Dish ${idx + 1}`}
                         </p>
-                        <p style={s.dayAmt}>{formatMoney(dayCalc.dayTotal)}</p>
+                        <p style={s.dishAmt}>
+                          {formatMoney(summary.dishTotal)}
+                        </p>
                       </div>
 
-                      {(day.items || []).map((item, itemIdx) => (
-                        <div
-                          key={item.item_id || item.localId || itemIdx}
-                          style={s.itemLine}
-                        >
-                          <p style={s.itemLeft}>{itemLeftText(item)}</p>
-                          <p style={s.itemRight}>
-                            {formatMoney(itemLineTotal(item))}
-                          </p>
-                        </div>
-                      ))}
-
-                      {Number(day.delivery_charge) > 0 ? (
-                        <div style={s.itemLine}>
-                          <p style={s.itemLeft}>Delivery</p>
-                          <p style={s.itemRight}>
-                            {formatMoney(day.delivery_charge)}
-                          </p>
-                        </div>
-                      ) : null}
-
-                      {day.note?.trim() ? (
-                        <p style={{ ...s.itemLeft, fontStyle: "italic" }}>
-                          {day.note.trim()}
+                      <div style={s.itemLine}>
+                        <p style={s.itemLeft}>
+                          {Number(dish.quantity) || 1}×
+                          {formatMoney(dish.rate_per_day)}/day ·{" "}
+                          {summary.dayCount}d
+                          {delivery > 0
+                            ? ` · +${formatMoney(delivery)} del`
+                            : ""}
                         </p>
-                      ) : null}
+                        <p style={s.itemRight}>
+                          {formatMoney(summary.dayAmount)}/d
+                        </p>
+                      </div>
+
+                      {dateGroups.map((g) => {
+                        const [monthPart, ...rest] = g.text.split(": ");
+                        const daysPart = rest.join(": ");
+                        return (
+                          <p key={g.key} style={s.dateLine}>
+                            <span style={s.dateMonth}>{monthPart}:</span>{" "}
+                            {daysPart}
+                          </p>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -450,27 +427,16 @@ const DatewiseBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => 
 
               <div style={s.divider} />
 
-              <div style={s.meta}>
-                {Number(bill.discount) > 0 && (
-                  <div style={s.row}>
-                    <span style={s.label}>Discount</span>
-                    <span style={s.valuePlain}>
-                      -{formatMoney(bill.discount)}
-                    </span>
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    ...s.dividerSolid,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "baseline",
-                  }}
-                >
-                  <span style={s.totalLabel}>Total</span>
-                  <span style={s.totalValue}>{formatMoney(grandTotal)}</span>
-                </div>
+              <div
+                style={{
+                  ...s.dividerSolid,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "baseline",
+                }}
+              >
+                <span style={s.totalLabel}>Total</span>
+                <span style={s.totalValue}>{formatMoney(grandTotal)}</span>
               </div>
 
               <div style={{ ...s.divider, marginTop: 14 }} />
@@ -484,67 +450,69 @@ const DatewiseBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => 
           </div>
         </div>
 
-        <div className="shrink-0 border-t p-4 flex gap-3 relative bg-white">
-          <div className="relative flex-1">
+        <div className="shrink-0 border-t p-4 space-y-2.5 relative bg-white">
+          <div className="flex gap-3 relative">
+            <div className="relative flex-1">
+              <button
+                type="button"
+                disabled={!!exporting}
+                onClick={() => setShowDownloadMenu((prev) => !prev)}
+                className="w-full border border-gray-200 rounded-xl py-3 font-semibold text-gray-800 flex items-center justify-center gap-2 active:scale-[0.98] transition disabled:opacity-60"
+              >
+                {exporting ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <Download size={16} />
+                    Download
+                    <ChevronUp
+                      size={14}
+                      className={`text-gray-400 transition ${
+                        showDownloadMenu ? "" : "rotate-180"
+                      }`}
+                    />
+                  </>
+                )}
+              </button>
+
+              {showDownloadMenu && !exporting && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-10">
+                  <button
+                    type="button"
+                    onClick={handleDownloadImage}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium active:bg-orange-50 border-b border-gray-100"
+                  >
+                    <ImageIcon size={16} className="text-orange-500" />
+                    Download as Image
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadPdf}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium active:bg-orange-50"
+                  >
+                    <FileText size={16} className="text-orange-500" />
+                    Download as PDF
+                  </button>
+                </div>
+              )}
+            </div>
+
             <button
               type="button"
-              disabled={!!exporting}
-              onClick={() => setShowDownloadMenu((prev) => !prev)}
-              className="w-full border border-gray-200 rounded-xl py-3 font-semibold text-gray-800 flex items-center justify-center gap-2 active:scale-[0.98] transition disabled:opacity-60"
+              onClick={handleCopyText}
+              className="flex-1 bg-orange-500 text-white rounded-xl py-3 font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition"
             >
-              {exporting ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                <>
-                  <Download size={16} />
-                  Download
-                  <ChevronUp
-                    size={14}
-                    className={`text-gray-400 transition ${
-                      showDownloadMenu ? "" : "rotate-180"
-                    }`}
-                  />
-                </>
-              )}
+              <Copy size={16} />
+              Copy Text
             </button>
-
-            {showDownloadMenu && !exporting && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-10">
-                <button
-                  type="button"
-                  onClick={handleDownloadImage}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium active:bg-orange-50 border-b border-gray-100"
-                >
-                  <ImageIcon size={16} className="text-orange-500" />
-                  Download as Image
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDownloadPdf}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium active:bg-orange-50"
-                >
-                  <FileText size={16} className="text-orange-500" />
-                  Download as PDF
-                </button>
-              </div>
-            )}
           </div>
-
-          <button
-            type="button"
-            onClick={handleCopyText}
-            className="flex-1 bg-orange-500 text-white rounded-xl py-3 font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition"
-          >
-            <Copy size={16} />
-            Copy Text
-          </button>
         </div>
       </div>
     </div>
   );
 };
 
-export default DatewiseBillPreviewModal;
+export default CalendarBillPreviewModal;

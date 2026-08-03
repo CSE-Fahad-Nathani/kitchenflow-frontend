@@ -1,10 +1,27 @@
 import { Bell, Check, Loader2 } from "lucide-react";
 import { formatDisplayDate } from "../../utils/formatDate";
-import { calcDayTotals, itemLineTotal } from "../../utils/datewiseCalc";
+import {
+  calcCalendarBill,
+  calcDishTotals,
+  groupDatesByMonth,
+} from "../../utils/calendarBillCalc";
 
 const money = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 
-const DatewiseBillDetailView = ({
+const Row = ({ label, value, strong }) => (
+  <div className="flex justify-between gap-3 text-[13px]">
+    <span className="text-gray-500">{label}</span>
+    <span
+      className={`text-right ${
+        strong ? "font-bold text-gray-900" : "font-semibold text-gray-800"
+      }`}
+    >
+      {value}
+    </span>
+  </div>
+);
+
+const CalendarBillDetailView = ({
   loading,
   bill,
   onPreview,
@@ -32,13 +49,14 @@ const DatewiseBillDetailView = ({
     );
   }
 
-  const days = bill.days || [];
+  const dishes = bill.dishes || [];
+  const calc = calcCalendarBill(dishes);
 
   return (
     <div className="px-3.5 py-3 space-y-2.5 pb-52">
-      <div className="bg-white rounded-xl border border-gray-100 p-3 space-y-1">
+      <div className="bg-white rounded-xl border border-gray-100 p-3 space-y-2">
         <p className="text-[11px] font-semibold text-orange-600 uppercase tracking-wide">
-          Date-wise Bill
+          Calendar Bill
         </p>
         <p className="text-[16px] font-bold text-gray-900">
           {bill.customer_name || "—"}
@@ -46,7 +64,12 @@ const DatewiseBillDetailView = ({
         {bill.customer_mobile && (
           <p className="text-[13px] text-gray-500">{bill.customer_mobile}</p>
         )}
-        <div className="flex items-center justify-between pt-2 border-t border-dashed border-gray-100 mt-2">
+        {calc.fromDate && calc.toDate ? (
+          <p className="text-[13px] text-gray-600 pt-1">
+            {formatDisplayDate(calc.fromDate)} → {formatDisplayDate(calc.toDate)}
+          </p>
+        ) : null}
+        <div className="flex items-center justify-between pt-2 border-t border-dashed border-gray-100">
           <span
             className={`text-[12px] font-semibold ${
               bill.is_paid ? "text-green-600" : "text-red-600"
@@ -58,84 +81,92 @@ const DatewiseBillDetailView = ({
             Reminders: {bill.reminder_count || 0}
           </span>
         </div>
-        <div className="flex justify-between items-baseline pt-2">
-          <div className="text-[12px] text-gray-500">
-            {Number(bill.discount) > 0
-              ? `Discount -${money(bill.discount)}`
-              : "No discount"}
+        <p className="text-[11px] text-gray-500">
+          Show dates on bill:{" "}
+          <span className="font-semibold text-gray-700">
+            {bill.show_dates ? "On" : "Off"}
+          </span>
+        </p>
+      </div>
+
+      {dishes.map((dish, index) => {
+        const summary = calc.dishSummaries[index] || calcDishTotals(dish);
+        return (
+          <div
+            key={dish.dish_entry_id || index}
+            className="bg-white rounded-xl border border-gray-100 p-3 space-y-1.5"
+          >
+            <p className="text-[14px] font-bold text-gray-900">
+              {dish.dish_name || "Dish"}
+            </p>
+            <Row label="Price / day" value={money(dish.rate_per_day)} />
+            <Row label="Quantity / day" value={Number(dish.quantity) || 1} />
+            <Row
+              label="Delivery / day"
+              value={money(dish.delivery_charge_per_day)}
+            />
+            <Row label="Per day amount" value={money(summary.dayAmount)} />
+            <Row label="Total days" value={summary.dayCount} strong />
+            {summary.dates.length > 0 ? (
+              <div className="pt-1 space-y-2">
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                  Dates
+                </p>
+                {groupDatesByMonth(summary.dates).map((group) => (
+                  <div key={group.key}>
+                    <p className="text-[11px] font-bold text-orange-700 mb-1">
+                      {group.label}
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {group.days.map((day) => {
+                        const ymd = `${group.key}-${String(day).padStart(2, "0")}`;
+                        const overlap = calc.overlappingDates.has(ymd);
+                        return (
+                          <span
+                            key={ymd}
+                            className={`min-w-[1.5rem] text-center text-[10px] font-semibold px-1.5 py-0.5 rounded-md border ${
+                              overlap
+                                ? "bg-amber-50 text-amber-800 border-amber-200"
+                                : "bg-orange-50 text-orange-800 border-orange-100"
+                            }`}
+                          >
+                            {day}
+                            {overlap ? " ★" : ""}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <div className="flex justify-between items-baseline pt-2 border-t border-dashed border-gray-200">
+              <span className="text-[13px] font-bold text-gray-900">
+                Dish total
+              </span>
+              <span className="text-[15px] font-bold text-orange-500">
+                {money(summary.dishTotal)}
+              </span>
+            </div>
           </div>
+        );
+      })}
+
+      {calc.overlappingDates.size > 0 ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] font-semibold text-amber-800">
+          Overlapping dates across dishes are marked ★ — each dish is still
+          billed separately for that day.
+        </div>
+      ) : null}
+
+      <div className="bg-white rounded-xl border border-gray-100 p-3">
+        <div className="flex justify-between items-baseline">
+          <span className="text-[15px] font-bold text-gray-900">Grand Total</span>
           <span className="text-[18px] font-bold text-orange-500">
             {money(bill.total_amount)}
           </span>
         </div>
       </div>
-
-      {days.map((day) => {
-        const dayCalc = calcDayTotals(day);
-        return (
-          <div
-            key={day.day_id || day.bill_date}
-            className="bg-white rounded-xl border border-gray-100 p-3 space-y-2"
-          >
-            <div className="flex justify-between items-start gap-2">
-              <div>
-                <p className="text-[14px] font-bold text-gray-900">
-                  {formatDisplayDate(day.bill_date)}
-                </p>
-                {day.note?.trim() && (
-                  <p className="text-[12px] text-gray-500 mt-0.5">
-                    {day.note.trim()}
-                  </p>
-                )}
-              </div>
-              <p className="text-[13px] font-bold text-orange-500 shrink-0">
-                {money(dayCalc.dayTotal)}
-              </p>
-            </div>
-
-            <ul className="space-y-1.5">
-              {(day.items || []).map((item) => (
-                <li
-                  key={item.item_id || `${item.dish_name}-${item.price}`}
-                  className="flex justify-between gap-3 text-[13px]"
-                >
-                  <div className="min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">
-                      {item.dish_name}
-                      {item.variant_name?.trim()
-                        ? ` (${item.variant_name})`
-                        : ""}
-                    </p>
-                    <p className="text-[11px] text-gray-400">
-                      {[
-                        `× ${Number(item.quantity) || 0}`,
-                        Number(item.price) > 0
-                          ? `${money(item.price)} each`
-                          : null,
-                        item.note?.trim() || null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </div>
-                  <span className="font-semibold text-gray-800 shrink-0">
-                    {money(itemLineTotal(item))}
-                  </span>
-                </li>
-              ))}
-            </ul>
-
-            {Number(day.delivery_charge) > 0 && (
-              <div className="flex justify-between text-[12.5px] pt-1 border-t border-dashed border-gray-100">
-                <span className="text-gray-500">Delivery</span>
-                <span className="font-semibold text-gray-800">
-                  {money(day.delivery_charge)}
-                </span>
-              </div>
-            )}
-          </div>
-        );
-      })}
 
       <div className="fixed bottom-16 left-0 right-0 z-40 px-3.5 pb-3 pt-2 bg-gradient-to-t from-gray-50 via-gray-50 to-transparent">
         <div className="max-w-md mx-auto space-y-2">
@@ -235,4 +266,4 @@ const DatewiseBillDetailView = ({
   );
 };
 
-export default DatewiseBillDetailView;
+export default CalendarBillDetailView;

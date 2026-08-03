@@ -9,9 +9,11 @@ import BillTypeChooser from "./pages/Orders/BillTypeChooser";
 import Orders from "./pages/Orders/Orders";
 import MonthlyTiffin from "./pages/MonthlyTiffin/MonthlyTiffin";
 import DatewiseBill from "./pages/DatewiseBill/DatewiseBill";
+import CalendarBill from "./pages/CalendarBill/CalendarBill";
 import History from "./pages/History/History";
 import SundayMenu from "./pages/SundayMenu/SundayMenu";
 import Analysis from "./pages/Analysis/Analysis";
+import Credits from "./pages/Credits/Credits";
 import Settings from "./pages/Settings/Settings";
 
 function App() {
@@ -26,13 +28,19 @@ function App() {
           <Route path="/orders/standard" element={<Orders />} />
           <Route path="/orders/monthly-tiffin" element={<MonthlyTiffin />} />
           <Route path="/orders/datewise" element={<DatewiseBill />} />
+          <Route path="/orders/calendar" element={<CalendarBill />} />
           <Route path="/history" element={<History />} />
+
+          <Route path="/credits" element={<Credits />} />
+          <Route path="/credits/today" element={<Credits />} />
 
           <Route path="/customers" element={<Customers />} />
           <Route path="/dishes" element={<Dishes />} />
           <Route path="/sunday-menu" element={<SundayMenu />} />
           <Route path="/analysis" element={<Analysis />} />
           <Route path="/settings" element={<Settings />} />
+
+          <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
 
         <BottomNavigation />

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Plus,
@@ -9,6 +9,8 @@ import {
   ShoppingBag,
   Loader2,
   UserPlus,
+  Wallet,
+  CheckCheck,
 } from "lucide-react";
 import OrderItemCard from "../../components/OrderItemCard";
 import CustomerSearch from "../../components/CustomerSearch";
@@ -18,6 +20,10 @@ import { useToastStore } from "../../store/toastStore";
 import { addOrder, updateOrder } from "../../api/orderApi";
 import { addCustomer } from "../../api/customerApi";
 import { addDish } from "../../api/dishApi";
+import {
+  clearOpenCreditsForCustomer,
+  fetchOpenCreditsForCustomer,
+} from "../../api/customerCreditApi";
 import BillPreviewModal from "../../components/BillPreviewModal";
 import DateInput from "../../components/DateInput";
 
@@ -74,7 +80,11 @@ const Orders = () => {
   const [saveNewCustomer, setSaveNewCustomer] = useState(true);
   const [addingCustomer, setAddingCustomer] = useState(false);
   const [addingDishIndex, setAddingDishIndex] = useState(null);
+  const [pendingCredit, setPendingCredit] = useState(null);
+  const [creditLoading, setCreditLoading] = useState(false);
+  const [clearingCredit, setClearingCredit] = useState(false);
   const scrollRef = useRef(null);
+  const creditRequestIdRef = useRef(0);
 
   const {
     customer,
@@ -103,6 +113,80 @@ const Orders = () => {
   const isNewCustomerCandidate = Boolean(
     (customer || "").trim() && !customer_id
   );
+
+  const loadPendingCredit = async (selectedCustomerId, selectedName) => {
+    if (!selectedCustomerId) {
+      setPendingCredit(null);
+      return;
+    }
+
+    const requestId = ++creditRequestIdRef.current;
+    setCreditLoading(true);
+
+    try {
+      const data = await fetchOpenCreditsForCustomer(selectedCustomerId, {
+        customer_name: selectedName || "",
+      });
+      if (requestId !== creditRequestIdRef.current) return;
+
+      if (data?.count > 0 && Number(data.total) > 0) {
+        setPendingCredit(data);
+      } else {
+        setPendingCredit(null);
+      }
+    } catch (error) {
+      console.error(error);
+      if (requestId !== creditRequestIdRef.current) return;
+      setPendingCredit(null);
+    } finally {
+      if (requestId === creditRequestIdRef.current) {
+        setCreditLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!customer_id) {
+      creditRequestIdRef.current += 1;
+      setPendingCredit(null);
+      setCreditLoading(false);
+      return;
+    }
+
+    loadPendingCredit(customer_id, customer);
+    // Only re-check when the selected customer id changes (e.g. edit mode load).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customer_id]);
+
+  const handleApplyCreditDiscount = () => {
+    if (!pendingCredit?.total) return;
+    setCharges("discount", Number(pendingCredit.total).toFixed(2));
+    toast.success(
+      "Discount applied",
+      `₹${Number(pendingCredit.total).toFixed(2)} set as discount — you can still edit it.`
+    );
+  };
+
+  const handleClearPendingCredit = async () => {
+    if (!customer_id || !pendingCredit?.count) return;
+
+    setClearingCredit(true);
+    try {
+      const response = await clearOpenCreditsForCustomer(customer_id, {
+        customer_name: customer || "",
+      });
+      setPendingCredit(null);
+      toast.success(
+        "Credit cleared",
+        response.message || "Open credit removed for this customer."
+      );
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed", "Could not clear credit. Try again.");
+    } finally {
+      setClearingCredit(false);
+    }
+  };
 
   const itemsSubtotal = useMemo(
     () => items.reduce((sum, item) => sum + Number(item.total || 0), 0),
@@ -421,6 +505,7 @@ const Orders = () => {
                 setCustomer(value);
                 setCustomerId(null);
                 setSaveNewCustomer(true);
+                setPendingCredit(null);
               }}
               onSelect={(selected) => {
                 setCustomer(selected.name);
@@ -429,6 +514,66 @@ const Orders = () => {
                 setSaveNewCustomer(false);
               }}
             />
+
+            {creditLoading && (
+              <div className="flex items-center gap-2 px-1 text-[11px] text-gray-500 font-medium">
+                <Loader2 size={12} className="animate-spin text-orange-500" />
+                Checking open credit…
+              </div>
+            )}
+
+            {pendingCredit?.count > 0 && (
+              <div className="animate-credit-alert rounded-xl border-2 p-2.5 space-y-2">
+                <div className="flex items-start gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center shrink-0">
+                    <Wallet size={15} strokeWidth={2.4} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-orange-800">
+                      Open credit
+                    </p>
+                    <p className="text-[14px] font-extrabold text-gray-900 leading-tight mt-0.5">
+                      ₹{Number(pendingCredit.total).toFixed(2)}
+                      <span className="ml-1.5 text-[11px] font-semibold text-orange-800/80">
+                        ({pendingCredit.count}{" "}
+                        {pendingCredit.count === 1 ? "entry" : "entries"})
+                      </span>
+                    </p>
+                    <p className="text-[11px] text-orange-900/75 mt-0.5 leading-snug">
+                      Apply as discount on this bill, then mark credit cleared.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleApplyCreditDiscount}
+                    className="press-scale flex-1 h-9 rounded-xl text-[12px] font-semibold text-white bg-orange-600 active:bg-orange-700"
+                  >
+                    Apply as discount
+                  </button>
+                  <button
+                    type="button"
+                    disabled={clearingCredit}
+                    onClick={handleClearPendingCredit}
+                    className="press-scale flex-1 h-9 rounded-xl text-[12px] font-semibold text-orange-800 bg-white border border-orange-300 flex items-center justify-center gap-1 active:bg-orange-50 disabled:opacity-60"
+                  >
+                    {clearingCredit ? (
+                      <>
+                        <Loader2 size={13} className="animate-spin" />
+                        Clearing…
+                      </>
+                    ) : (
+                      <>
+                        <CheckCheck size={14} />
+                        Mark clear
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="relative">
               <Phone

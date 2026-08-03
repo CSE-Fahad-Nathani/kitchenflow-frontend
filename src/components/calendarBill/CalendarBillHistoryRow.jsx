@@ -1,15 +1,29 @@
 import { Check, Loader2, Wallet } from "lucide-react";
-import { formatDisplayTime } from "../utils/formatDate";
+import { formatDisplayTime, formatShortDate } from "../../utils/formatDate";
 
-const OrderHistoryRow = ({
-  order,
+const CalendarBillHistoryRow = ({
+  bill,
   onClick,
   onMarkPaid,
   onPaidExtra,
   markingPaid = false,
   payingExtra = false,
 }) => {
-  const time = formatDisplayTime(order.delivery_datetime);
+  const time = formatDisplayTime(bill.created_at);
+  const date =
+    formatShortDate(bill.created_at) ||
+    (bill.created_at ? String(bill.created_at) : "—");
+
+  const meta = [
+    "Calendar",
+    bill.dish_count != null
+      ? `${bill.dish_count} dish${Number(bill.dish_count) === 1 ? "" : "es"}`
+      : null,
+    time || date,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   const busy = markingPaid || payingExtra;
 
   return (
@@ -22,41 +36,35 @@ const OrderHistoryRow = ({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-[13.5px] text-gray-900 truncate leading-tight">
-              {order.customer_name?.trim() || `Order #${order.order_number}`}
+              {bill.customer_name?.trim() || "Customer"}
             </h3>
-            <p className="text-[11.5px] text-gray-500 mt-0.5 truncate">
-              #{order.order_number}
-              <span className="text-gray-300 mx-1">·</span>
-              {time}
-            </p>
+            <p className="text-[11.5px] text-gray-500 mt-0.5 truncate">{meta}</p>
           </div>
 
           <div className="text-right shrink-0 pl-1">
             <p className="font-bold text-[13.5px] text-orange-500 leading-tight whitespace-nowrap">
-              ₹{Number(order.total_amount).toLocaleString("en-IN")}
+              ₹{Number(bill.total_amount).toLocaleString("en-IN")}
             </p>
             <p
               className={`text-[11px] font-semibold mt-0.5 leading-tight ${
-                order.is_paid ? "text-green-600" : "text-red-600"
+                bill.is_paid ? "text-green-600" : "text-red-600"
               }`}
             >
-              {order.is_paid ? "Paid" : "Unpaid"}
+              {bill.is_paid ? "Paid" : "Unpaid"}
             </p>
           </div>
         </div>
       </button>
 
-      {!order.is_paid && (
+      {!bill.is_paid && (
         <div className="flex flex-col gap-1 shrink-0">
           <button
             type="button"
             disabled={busy}
             onClick={(e) => {
               e.stopPropagation();
-              onMarkPaid?.(order.order_id);
+              onMarkPaid?.(bill.bill_id);
             }}
-            aria-label="Mark paid"
-            title="Mark Paid"
             className="press-scale h-8 px-2 rounded-lg font-semibold text-[10.5px] text-green-700 bg-green-50 border border-green-200 flex items-center justify-center gap-0.5 active:bg-green-100 disabled:opacity-60 whitespace-nowrap"
           >
             {markingPaid ? (
@@ -73,10 +81,8 @@ const OrderHistoryRow = ({
             disabled={busy}
             onClick={(e) => {
               e.stopPropagation();
-              onPaidExtra?.(order);
+              onPaidExtra?.(bill);
             }}
-            aria-label="Paid extra"
-            title="Paid Extra"
             className="press-scale h-8 px-2 rounded-lg font-semibold text-[10.5px] text-amber-800 bg-amber-50 border border-amber-200 flex items-center justify-center gap-0.5 active:bg-amber-100 disabled:opacity-60 whitespace-nowrap"
           >
             {payingExtra ? (
@@ -94,4 +100,4 @@ const OrderHistoryRow = ({
   );
 };
 
-export default OrderHistoryRow;
+export default CalendarBillHistoryRow;

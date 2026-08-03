@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  CalendarDays,
   CalendarRange,
   ChevronRight,
   FileStack,
@@ -11,8 +12,9 @@ const options = [
   {
     id: "standard",
     title: "Standard Bill",
-    subtitle: "Single order · items + delivery",
-    hint: "Best for one-time catering",
+    subtitle:
+      "One customer, one order — choose dishes, quantities, and delivery if needed.",
+    hint: "Use for a single day’s catering or a one-time order.",
     icon: Receipt,
     path: "/orders/standard",
     accent: {
@@ -25,8 +27,9 @@ const options = [
   {
     id: "tiffin",
     title: "Monthly Tiffin",
-    subtitle: "Date range · daily rate · exclusions",
-    hint: "Same tiffin across many days",
+    subtitle:
+      "Pick a date range and daily rate per dish. Mark days they skipped — total is days × rate.",
+    hint: "Best for regular tiffin over a month (one or more dishes).",
     icon: CalendarRange,
     path: "/orders/monthly-tiffin",
     accent: {
@@ -39,8 +42,9 @@ const options = [
   {
     id: "datewise",
     title: "Date-wise Bill",
-    subtitle: "Multiple days · dishes per day",
-    hint: "Merge several dates into one bill",
+    subtitle:
+      "Add several dates, then enter the dishes and amounts for each day separately.",
+    hint: "Use when the menu or qty changes day by day, then merge into one bill.",
     icon: FileStack,
     path: "/orders/datewise",
     accent: {
@@ -48,6 +52,21 @@ const options = [
       iconText: "text-white",
       ring: "active:ring-rose-200",
       bar: "bg-rose-500",
+    },
+  },
+  {
+    id: "calendar",
+    title: "Calendar Bill",
+    subtitle:
+      "Add each dish once, then tap the calendar dates that dish was served.",
+    hint: "Use when the same dishes repeat on scattered dates across the month.",
+    icon: CalendarDays,
+    path: "/orders/calendar",
+    accent: {
+      iconBg: "bg-teal-500",
+      iconText: "text-white",
+      ring: "active:ring-teal-200",
+      bar: "bg-teal-500",
     },
   },
 ];
@@ -103,26 +122,26 @@ const BillTypeChooser = () => {
               <div className="flex items-stretch">
                 <div className={`w-1.5 shrink-0 ${option.accent.bar}`} />
 
-                <div className="flex-1 flex items-center gap-3 px-3.5 py-3.5 min-w-0">
+                <div className="flex-1 flex items-start gap-3 px-3.5 py-3.5 min-w-0">
                   <div
-                    className={`w-11 h-11 rounded-xl ${option.accent.iconBg} ${option.accent.iconText} flex items-center justify-center shrink-0 shadow-sm`}
+                    className={`w-11 h-11 rounded-xl ${option.accent.iconBg} ${option.accent.iconText} flex items-center justify-center shrink-0 shadow-sm mt-0.5`}
                   >
                     <Icon size={20} strokeWidth={2.25} />
                   </div>
 
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 pr-0.5">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold text-gray-400 tracking-wider">
                         0{index + 1}
                       </span>
-                      <p className="text-[15px] font-bold text-gray-900 truncate">
+                      <p className="text-[15px] font-bold text-gray-900">
                         {option.title}
                       </p>
                     </div>
-                    <p className="text-[12px] text-gray-500 mt-0.5 leading-snug">
+                    <p className="text-[12px] text-gray-600 mt-1 leading-relaxed">
                       {option.subtitle}
                     </p>
-                    <p className="text-[11px] text-orange-600/80 font-medium mt-1">
+                    <p className="text-[11px] text-orange-600/90 font-medium mt-1.5 leading-snug">
                       {option.hint}
                     </p>
                   </div>

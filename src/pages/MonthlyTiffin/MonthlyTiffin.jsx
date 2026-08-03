@@ -23,10 +23,13 @@ const newLocalId = () =>
     ? crypto.randomUUID()
     : `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-const emptyExcluded = () => ({
+const emptyDish = () => ({
   localId: newLocalId(),
-  excluded_date: "",
-  reason: "",
+  dish_name: "",
+  variant_name: "",
+  quantity: "1",
+  rate_per_day: "",
+  delivery_charge: "",
 });
 
 const initialForm = () => {
@@ -37,13 +40,7 @@ const initialForm = () => {
     customer_mobile: "",
     from_date: range.fromDate,
     to_date: range.toDate,
-    dish_name: "",
-    variant_name: "",
-    quantity: "1",
-    rate_per_day: "",
-    delivery_charge: "",
     discount: "",
-    variants: [],
   };
 };
 
@@ -54,6 +51,7 @@ const MonthlyTiffin = () => {
   const [view, setView] = useState("create"); // create | history | detail
 
   const [form, setForm] = useState(initialForm);
+  const [dishes, setDishes] = useState([emptyDish()]);
   const [excludedDates, setExcludedDates] = useState([]);
   const [saveNewCustomer, setSaveNewCustomer] = useState(true);
   const [addingCustomer, setAddingCustomer] = useState(false);
@@ -83,13 +81,17 @@ const MonthlyTiffin = () => {
       calcTiffinBill({
         fromDate: form.from_date,
         toDate: form.to_date,
-        ratePerDay: form.rate_per_day,
-        quantity: form.quantity,
-        deliveryCharge: form.delivery_charge,
+        dishes: dishes.map((d) => ({
+          dish_name: d.dish_name,
+          variant_name: d.variant_name,
+          rate_per_day: d.rate_per_day,
+          quantity: d.quantity,
+          delivery_charge_per_day: d.delivery_charge,
+        })),
         discount: form.discount,
         excludedDates,
       }),
-    [form, excludedDates]
+    [form, dishes, excludedDates]
   );
 
   const updateForm = (patch) => {
@@ -107,9 +109,21 @@ const MonthlyTiffin = () => {
 
   const resetCreateForm = () => {
     setForm(initialForm());
+    setDishes([emptyDish()]);
     setExcludedDates([]);
     setSaveNewCustomer(true);
   };
+
+  // Drop excluded dates that fall outside the bill range
+  useEffect(() => {
+    if (!form.from_date || !form.to_date) return;
+    setExcludedDates((prev) =>
+      prev.filter((d) => {
+        const key = String(d).slice(0, 10);
+        return key >= form.from_date && key <= form.to_date;
+      })
+    );
+  }, [form.from_date, form.to_date]);
 
   useEffect(() => {
     if (view !== "history") return;
@@ -200,18 +214,23 @@ const MonthlyTiffin = () => {
       toast.warning("Invalid", "To date must be on or after From date.");
       return false;
     }
-    if (!form.dish_name.trim()) {
-      toast.warning("Missing", "Dish name is required.");
-      return false;
+
+    for (let i = 0; i < dishes.length; i += 1) {
+      const dish = dishes[i];
+      if (!dish.dish_name.trim()) {
+        toast.warning("Missing", `Dish ${i + 1}: name is required.`);
+        return false;
+      }
+      if (!(Number(dish.quantity) > 0)) {
+        toast.warning("Missing", `Dish ${i + 1}: quantity must be > 0.`);
+        return false;
+      }
+      if (!(Number(dish.rate_per_day) > 0)) {
+        toast.warning("Missing", `Dish ${i + 1}: rate/day must be > 0.`);
+        return false;
+      }
     }
-    if (!(Number(form.quantity) > 0)) {
-      toast.warning("Missing", "Quantity must be greater than 0.");
-      return false;
-    }
-    if (!(Number(form.rate_per_day) > 0)) {
-      toast.warning("Missing", "Rate per day must be greater than 0.");
-      return false;
-    }
+
     if (calc.billableDays <= 0) {
       toast.warning("Invalid", "Billable days must be at least 1.");
       return false;
@@ -246,11 +265,19 @@ const MonthlyTiffin = () => {
 
       const customerId = await ensureCustomerId();
 
-      const excludedPayload = excludedDates
-        .filter((row) => row.excluded_date)
-        .map((row) => ({
-          excluded_date: row.excluded_date,
-          reason: row.reason.trim() || "",
+      const dishesPayload = dishes.map((d) => ({
+        dish_name: d.dish_name.trim(),
+        variant_name: d.variant_name.trim() || "",
+        quantity: Number(d.quantity) || 1,
+        rate_per_day: Number(d.rate_per_day),
+        delivery_charge_per_day: Number(d.delivery_charge) || 0,
+      }));
+
+      const excludedPayload = (excludedDates || [])
+        .filter(Boolean)
+        .map((date) => ({
+          excluded_date: String(date).slice(0, 10),
+          reason: "",
         }));
 
       const payload = {
@@ -259,11 +286,7 @@ const MonthlyTiffin = () => {
         customer_mobile: form.customer_mobile.trim() || "",
         from_date: form.from_date,
         to_date: form.to_date,
-        dish_name: form.dish_name.trim(),
-        variant_name: form.variant_name.trim() || "",
-        quantity: Number(form.quantity) || 1,
-        rate_per_day: Number(form.rate_per_day),
-        delivery_charge: Number(form.delivery_charge) || 0,
+        dishes: dishesPayload,
         discount: Number(form.discount) || 0,
         total_amount: calc.grandTotal,
         excluded_dates: excludedPayload,
@@ -448,18 +471,20 @@ const MonthlyTiffin = () => {
         <CreateMonthlyTiffinView
           form={form}
           onFormChange={updateForm}
-          excludedDates={excludedDates}
-          onAddExcluded={() =>
-            setExcludedDates((prev) => [...prev, emptyExcluded()])
-          }
-          onUpdateExcluded={(index, patch) =>
-            setExcludedDates((prev) =>
+          dishes={dishes}
+          onAddDish={() => setDishes((prev) => [...prev, emptyDish()])}
+          onUpdateDish={(index, patch) =>
+            setDishes((prev) =>
               prev.map((row, i) => (i === index ? { ...row, ...patch } : row))
             )
           }
-          onRemoveExcluded={(index) =>
-            setExcludedDates((prev) => prev.filter((_, i) => i !== index))
+          onRemoveDish={(index) =>
+            setDishes((prev) =>
+              prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)
+            )
           }
+          excludedDates={excludedDates}
+          onExcludedDatesChange={setExcludedDates}
           calc={calc}
           isNewCustomerCandidate={isNewCustomerCandidate}
           saveNewCustomer={saveNewCustomer}

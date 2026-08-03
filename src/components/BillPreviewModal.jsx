@@ -28,7 +28,7 @@ const s = {
     width: "100%",
     maxWidth: "340px",
     margin: "0 auto",
-    fontFamily: "Arial, Helvetica, sans-serif",
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif',
     color: "#111827",
     boxSizing: "border-box",
   },
@@ -179,7 +179,7 @@ const BillPreviewModal = ({ open, order, onClose, variant = "bill" }) => {
     if (!node) throw new Error("Bill not ready");
 
     return html2canvas(node, {
-      scale: 2,
+      scale: 4,
       useCORS: true,
       backgroundColor: "#ffffff",
       logging: false,
@@ -191,7 +191,7 @@ const BillPreviewModal = ({ open, order, onClose, variant = "bill" }) => {
 
         cloned.style.color = "#111827";
         cloned.style.backgroundColor = "#ffffff";
-        cloned.style.fontFamily = "Arial, Helvetica, sans-serif";
+        cloned.style.fontFamily = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif';
       },
     });
   };

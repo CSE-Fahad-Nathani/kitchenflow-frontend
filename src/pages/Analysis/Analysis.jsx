@@ -207,6 +207,7 @@ const Analysis = () => {
   const bestDay = data?.best_day;
   const tiffin = data?.monthly_tiffin || {};
   const datewise = data?.datewise_bills || {};
+  const calendar = data?.calendar_bills || {};
   const sunday = data?.sunday_revenue || {};
   const sundayDays = sunday.days || [];
   const bestSunday = sunday.best_sunday;
@@ -345,6 +346,13 @@ const Analysis = () => {
                   countLabel="bills"
                   total={Number(revenue.total_revenue)}
                 />
+                <RevenueSourceRow
+                  label="Calendar Bills"
+                  amount={revenue.by_type?.calendar_bills?.revenue}
+                  count={revenue.by_type?.calendar_bills?.count}
+                  countLabel="bills"
+                  total={Number(revenue.total_revenue)}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -407,6 +415,14 @@ const Analysis = () => {
                 <StatTile label="Bills" value={num(datewise.total_bills)} />
                 <StatTile label="Revenue" value={money(datewise.total_revenue)} />
                 <StatTile label="Avg Bill" value={money(datewise.average_bill)} />
+              </div>
+            </Section>
+
+            <Section title="Calendar Bills">
+              <div className="grid grid-cols-3 gap-2">
+                <StatTile label="Bills" value={num(calendar.total_bills)} />
+                <StatTile label="Revenue" value={money(calendar.total_revenue)} />
+                <StatTile label="Avg Bill" value={money(calendar.average_bill)} />
               </div>
             </Section>
 

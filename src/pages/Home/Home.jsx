@@ -19,12 +19,14 @@ import {
   markOrderPaid,
   increaseReminder,
 } from "../../api/orderApi";
+import { createPaidExtra } from "../../api/customerCreditApi";
 import useOrderStore from "../../store/orderStore";
 import {
   MenuRowSkeleton,
   StatCardSkeleton,
 } from "../../components/Skeleton";
 import { useToastStore } from "../../store/toastStore";
+import PaidExtraModal from "../../components/credits/PaidExtraModal";
 
 const menus = [
   {
@@ -70,11 +72,16 @@ const Home = () => {
     today_revenue: 0,
     pending_orders: 0,
     pending_amount: 0,
+    open_credit_total: 0,
+    open_credit_people: 0,
+    today_extras_total: 0,
   });
   const [showRevenueModal, setShowRevenueModal] = useState(false);
   const [todayOrders, setTodayOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [reminderBill, setReminderBill] = useState(null);
+  const [paidExtraOrder, setPaidExtraOrder] = useState(null);
+  const [payingExtra, setPayingExtra] = useState(false);
 
   useEffect(() => {
     const loadHome = async () => {
@@ -120,10 +127,54 @@ const Home = () => {
               ...prev,
               is_paid: true,
             }
-          : null
+          : prev
       );
     } catch (error) {
       console.error(error);
+      toast.error("Failed", "Unable to mark paid.");
+    }
+  };
+
+  const handleConfirmPaidExtra = async ({ amount, note }) => {
+    if (!paidExtraOrder || payingExtra) return;
+
+    try {
+      setPayingExtra(true);
+      await createPaidExtra({
+        bill_type: "standard",
+        bill_id: paidExtraOrder.order_id,
+        amount,
+        note,
+        customer_id: paidExtraOrder.customer_id || null,
+        customer_name: paidExtraOrder.customer_name || "",
+        customer_mobile: paidExtraOrder.customer_mobile || "",
+      });
+
+      const dashboard = await fetchDashboardStatistics();
+      setStats(dashboard);
+
+      setTodayOrders((prev) =>
+        prev.map((order) =>
+          order.order_id === paidExtraOrder.order_id
+            ? { ...order, is_paid: true }
+            : order
+        )
+      );
+      setSelectedOrder((prev) =>
+        prev?.order_id === paidExtraOrder.order_id
+          ? { ...prev, is_paid: true }
+          : prev
+      );
+      setPaidExtraOrder(null);
+      toast.success("Saved", "Marked paid and credit recorded.");
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        "Failed",
+        error?.response?.data?.message || "Unable to save paid extra."
+      );
+    } finally {
+      setPayingExtra(false);
     }
   };
 
@@ -200,6 +251,8 @@ const Home = () => {
             <StatCardSkeleton />
             <StatCardSkeleton />
             <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2">
@@ -248,6 +301,49 @@ const Home = () => {
               <h2 className="text-xl font-bold mt-0.5 text-orange-500 leading-tight">
                 ₹{Number(stats.pending_amount).toFixed(0)}
               </h2>
+            </div>
+
+            <div className="bg-white rounded-xl border border-gray-100 px-3 py-2.5">
+              <div className="flex justify-between items-start gap-1.5">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                    Open Credit
+                  </p>
+                  <h2 className="text-xl font-bold mt-0.5 text-amber-600 leading-tight">
+                    ₹{Number(stats.open_credit_total || 0).toFixed(0)}
+                  </h2>
+                  <p className="text-[11px] font-semibold text-gray-500 mt-0.5">
+                    {Number(stats.open_credit_people || 0)} people
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate("/credits")}
+                  className="text-[10px] font-bold text-orange-500 bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-full shrink-0"
+                >
+                  View
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-gray-100 px-3 py-2.5">
+              <div className="flex justify-between items-start gap-1.5">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                    Today's Extras
+                  </p>
+                  <h2 className="text-xl font-bold mt-0.5 text-amber-600 leading-tight">
+                    ₹{Number(stats.today_extras_total || 0).toFixed(0)}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate("/credits/today")}
+                  className="text-[10px] font-bold text-orange-500 bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-full shrink-0"
+                >
+                  View
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -430,9 +526,22 @@ const Home = () => {
         order={selectedOrder}
         onClose={() => setSelectedOrder(null)}
         onMarkPaid={handleMarkPaid}
+        onPaidExtra={(order) => setPaidExtraOrder(order)}
+        payingExtra={payingExtra}
         onReminder={handleReminder}
         onEdit={handleEdit}
         showDelete={false}
+      />
+
+      <PaidExtraModal
+        open={!!paidExtraOrder}
+        customerName={paidExtraOrder?.customer_name || ""}
+        billTotal={paidExtraOrder?.total_amount}
+        submitting={payingExtra}
+        onClose={() => {
+          if (!payingExtra) setPaidExtraOrder(null);
+        }}
+        onConfirm={handleConfirmPaidExtra}
       />
 
       <BillPreviewModal

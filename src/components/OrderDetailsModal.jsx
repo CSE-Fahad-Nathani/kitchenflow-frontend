@@ -9,10 +9,12 @@ const OrderDetailsModal = ({
   order,
   onClose,
   onMarkPaid,
+  onPaidExtra,
   onEdit,
   onDelete,
   onReminder,
   showDelete = true,
+  payingExtra = false,
 }) => {
   if (!open || !order) return null;
 
@@ -202,31 +204,44 @@ const OrderDetailsModal = ({
 
         {/* Compact actions */}
         <div className="shrink-0 border-t border-gray-100 bg-white p-2.5">
-          <div
-            className={`grid gap-2 ${
-              showDelete ? "grid-cols-3" : "grid-cols-2"
-            }`}
-          >
-            {!order.is_paid ? (
+          {!order.is_paid ? (
+            <div className="grid grid-cols-2 gap-2 mb-2">
               <button
                 type="button"
+                disabled={payingExtra}
                 onClick={() => onMarkPaid(order.order_id)}
-                className="press-scale h-10 rounded-xl text-[12.5px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 flex items-center justify-center gap-1 active:bg-emerald-100 transition-colors"
+                className="press-scale h-10 rounded-xl text-[12.5px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 flex items-center justify-center gap-1 active:bg-emerald-100 transition-colors disabled:opacity-60"
               >
                 <Check size={14} strokeWidth={2.5} />
                 Mark Paid
               </button>
-            ) : (
+              <button
+                type="button"
+                disabled={payingExtra}
+                onClick={() => onPaidExtra?.(order)}
+                className="press-scale h-10 rounded-xl text-[12.5px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 flex items-center justify-center gap-1 active:bg-amber-100 transition-colors disabled:opacity-60"
+              >
+                Paid Extra
+              </button>
+            </div>
+          ) : (
+            <div className="mb-2">
               <button
                 type="button"
                 disabled
-                className="h-10 rounded-xl text-[12.5px] font-semibold text-emerald-700/70 bg-emerald-50/60 border border-emerald-100 flex items-center justify-center gap-1 cursor-not-allowed"
+                className="w-full h-10 rounded-xl text-[12.5px] font-semibold text-emerald-700/70 bg-emerald-50/60 border border-emerald-100 flex items-center justify-center gap-1 cursor-not-allowed"
               >
                 <Check size={14} strokeWidth={2.5} />
                 Paid
               </button>
-            )}
+            </div>
+          )}
 
+          <div
+            className={`grid gap-2 ${
+              showDelete ? "grid-cols-2" : "grid-cols-1"
+            }`}
+          >
             <button
               type="button"
               onClick={() => onEdit(order)}

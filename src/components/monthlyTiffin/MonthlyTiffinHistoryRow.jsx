@@ -1,20 +1,25 @@
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Wallet } from "lucide-react";
 import { formatDisplayDate } from "../../utils/formatDate";
 
 const MonthlyTiffinHistoryRow = ({
   bill,
   onClick,
   onMarkPaid,
+  onPaidExtra,
   markingPaid = false,
+  payingExtra = false,
 }) => {
   const from = formatDisplayDate(bill.from_date);
   const to = formatDisplayDate(bill.to_date);
-  const dishLine = [bill.dish_name, bill.variant_name]
-    .filter(Boolean)
-    .join(" · ");
+  const dishCount = Number(bill.dish_count) || 0;
+  const dishLine =
+    dishCount > 1
+      ? `${dishCount} dishes`
+      : [bill.dish_name, bill.variant_name].filter(Boolean).join(" · ");
+  const busy = markingPaid || payingExtra;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.03)] px-3 py-2.5 flex items-center gap-2">
+    <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.03)] px-3 py-2.5 flex items-center gap-1.5">
       <button
         type="button"
         onClick={onClick}
@@ -52,26 +57,44 @@ const MonthlyTiffinHistoryRow = ({
       </button>
 
       {!bill.is_paid && (
-        <button
-          type="button"
-          disabled={markingPaid}
-          onClick={(e) => {
-            e.stopPropagation();
-            onMarkPaid?.(bill.bill_id);
-          }}
-          aria-label="Mark paid"
-          title="Mark Paid"
-          className="press-scale shrink-0 h-9 px-2.5 rounded-lg font-semibold text-[11px] text-green-700 bg-green-50 border border-green-200 flex items-center justify-center gap-1 active:bg-green-100 disabled:opacity-60 whitespace-nowrap"
-        >
-          {markingPaid ? (
-            <Loader2 size={13} className="animate-spin" />
-          ) : (
-            <>
-              <Check size={13} strokeWidth={2.5} />
-              Mark Paid
-            </>
-          )}
-        </button>
+        <div className="flex flex-col gap-1 shrink-0">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={(e) => {
+              e.stopPropagation();
+              onMarkPaid?.(bill.bill_id);
+            }}
+            className="press-scale h-8 px-2 rounded-lg font-semibold text-[10.5px] text-green-700 bg-green-50 border border-green-200 flex items-center justify-center gap-0.5 active:bg-green-100 disabled:opacity-60 whitespace-nowrap"
+          >
+            {markingPaid ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              <>
+                <Check size={12} strokeWidth={2.5} />
+                Paid
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={(e) => {
+              e.stopPropagation();
+              onPaidExtra?.(bill);
+            }}
+            className="press-scale h-8 px-2 rounded-lg font-semibold text-[10.5px] text-amber-800 bg-amber-50 border border-amber-200 flex items-center justify-center gap-0.5 active:bg-amber-100 disabled:opacity-60 whitespace-nowrap"
+          >
+            {payingExtra ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              <>
+                <Wallet size={11} strokeWidth={2.5} />
+                Credit
+              </>
+            )}
+          </button>
+        </div>
       )}
     </div>
   );
