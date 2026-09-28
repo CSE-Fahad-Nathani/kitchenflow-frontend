@@ -1,5 +1,6 @@
 import {
   CalendarDays,
+  CheckCheck,
   Loader2,
   Minus,
   Phone,
@@ -8,6 +9,7 @@ import {
   User,
   UserPlus,
   UtensilsCrossed,
+  Wallet,
 } from "lucide-react";
 import CustomerSearch from "../CustomerSearch";
 import DateMultiSelectCalendar from "./DateMultiSelectCalendar";
@@ -62,6 +64,8 @@ const QtyStepper = ({ value, onChange }) => (
 const CreateCalendarBillView = ({
   customer,
   onCustomerChange,
+  discount,
+  onDiscountChange,
   dishes,
   onAddDish,
   onUpdateDish,
@@ -74,6 +78,11 @@ const CreateCalendarBillView = ({
   setSaveNewCustomer,
   addingCustomer,
   onAddCustomerNow,
+  pendingCredit,
+  creditLoading,
+  clearingCredit,
+  onApplyCreditDiscount,
+  onClearPendingCredit,
   submitting,
   onPreview,
 }) => {
@@ -99,6 +108,66 @@ const CreateCalendarBillView = ({
               })
             }
           />
+
+          {creditLoading && (
+            <div className="flex items-center gap-2 px-1 text-[11px] text-gray-500 font-medium">
+              <Loader2 size={12} className="animate-spin text-orange-500" />
+              Checking open credit…
+            </div>
+          )}
+
+          {pendingCredit?.count > 0 && (
+            <div className="animate-credit-alert rounded-xl border-2 p-2.5 space-y-2">
+              <div className="flex items-start gap-2">
+                <div className="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center shrink-0">
+                  <Wallet size={15} strokeWidth={2.4} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-orange-800">
+                    Open credit
+                  </p>
+                  <p className="text-[14px] font-extrabold text-gray-900 leading-tight mt-0.5">
+                    ₹{Number(pendingCredit.total).toFixed(2)}
+                    <span className="ml-1.5 text-[11px] font-semibold text-orange-800/80">
+                      ({pendingCredit.count}{" "}
+                      {pendingCredit.count === 1 ? "entry" : "entries"})
+                    </span>
+                  </p>
+                  <p className="text-[11px] text-orange-900/75 mt-0.5 leading-snug">
+                    Apply as discount on this bill, then mark credit cleared.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={onApplyCreditDiscount}
+                  className="press-scale flex-1 h-9 rounded-xl text-[12px] font-semibold text-white bg-orange-600 active:bg-orange-700"
+                >
+                  Apply as discount
+                </button>
+                <button
+                  type="button"
+                  disabled={clearingCredit}
+                  onClick={onClearPendingCredit}
+                  className="press-scale flex-1 h-9 rounded-xl text-[12px] font-semibold text-orange-800 bg-white border border-orange-300 flex items-center justify-center gap-1 active:bg-orange-50 disabled:opacity-60"
+                >
+                  {clearingCredit ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin" />
+                      Clearing…
+                    </>
+                  ) : (
+                    <>
+                      <CheckCheck size={14} />
+                      Mark clear
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="relative">
             <Phone
@@ -401,7 +470,40 @@ const CreateCalendarBillView = ({
               />
             </label>
 
-            <div className="flex justify-between items-baseline pt-2 border-t border-dashed border-gray-200">
+            <label className="block">
+              <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                Discount (optional)
+              </span>
+              <div className="relative mt-1">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">
+                  ₹
+                </span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  placeholder="0"
+                  value={discount || ""}
+                  onChange={(e) => onDiscountChange(e.target.value)}
+                  className={`${fieldClass} pl-6 pr-2`}
+                />
+              </div>
+            </label>
+
+            <div className="pt-2 border-t border-dashed border-gray-200 space-y-1 text-[12px]">
+              <div className="flex justify-between text-gray-500 font-medium">
+                <span>Dishes subtotal</span>
+                <span>{money(calc.dishesSubtotal)}</span>
+              </div>
+              {Number(calc.discount) > 0 && (
+                <div className="flex justify-between text-green-600 font-medium">
+                  <span>Discount</span>
+                  <span>-{money(calc.discount)}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-between items-baseline pt-1">
               <span className="text-[15px] font-bold text-gray-900">
                 Grand Total
               </span>

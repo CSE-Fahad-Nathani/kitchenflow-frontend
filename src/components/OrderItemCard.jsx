@@ -9,6 +9,8 @@ const inputClass =
 const OrderItemCard = ({
   item,
   index,
+  isActive = false,
+  onActivate,
   onChange,
   onDelete,
   onAddDishNow,
@@ -99,10 +101,28 @@ const OrderItemCard = ({
   const variants = item.variants || [];
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-2 space-y-1.5">
+    <div
+      onFocus={onActivate}
+      onPointerDown={onActivate}
+      className={`rounded-xl border p-2 space-y-1.5 transition-all duration-200 ${
+        isActive
+          ? "bg-orange-50/90 border-orange-300 shadow-[0_0_0_3px_rgba(249,115,22,0.14)]"
+          : "bg-white border-gray-100"
+      }`}
+    >
       <div className="flex gap-1.5 items-center">
-        <div className="shrink-0 w-5 h-5 rounded-md bg-orange-50 border border-orange-100 flex items-center justify-center">
-          <span className="text-[10px] font-bold text-orange-500">
+        <div
+          className={`shrink-0 w-5 h-5 rounded-md border flex items-center justify-center ${
+            isActive
+              ? "bg-orange-500 border-orange-500"
+              : "bg-orange-50 border-orange-100"
+          }`}
+        >
+          <span
+            className={`text-[10px] font-bold ${
+              isActive ? "text-white" : "text-orange-500"
+            }`}
+          >
             {index + 1}
           </span>
         </div>

@@ -97,7 +97,7 @@ export const getBillDateRange = (dishes = []) => {
   return { fromDate: all[0], toDate: all[all.length - 1] };
 };
 
-export const calcCalendarBill = (dishes = []) => {
+export const calcCalendarBill = (dishes = [], discount = 0) => {
   const dishSummaries = dishes.map((dish) => ({
     localId: dish.localId,
     dish_entry_id: dish.dish_entry_id,
@@ -105,13 +105,17 @@ export const calcCalendarBill = (dishes = []) => {
     ...calcDishTotals(dish),
   }));
 
-  const grandTotal = dishSummaries.reduce((sum, d) => sum + d.dishTotal, 0);
+  const dishesSubtotal = dishSummaries.reduce((sum, d) => sum + d.dishTotal, 0);
+  const disc = Number(discount) || 0;
+  const grandTotal = Math.max(0, dishesSubtotal - disc);
   const totalDays = dishSummaries.reduce((sum, d) => sum + d.dayCount, 0);
   const overlappingDates = findOverlappingDates(dishes);
   const { fromDate, toDate } = getBillDateRange(dishes);
 
   return {
     dishSummaries,
+    dishesSubtotal,
+    discount: disc,
     grandTotal,
     totalDays,
     dishCount: dishes.length,
@@ -168,6 +172,11 @@ export const buildCalendarBillText = (bill, calc) => {
 ${customerLine}${period}
 
 ${dishBlocks}
+${
+  Number(bill.discount ?? calc.discount) > 0
+    ? `\nDiscount = -₹${Number(bill.discount ?? calc.discount).toLocaleString("en-IN")}`
+    : ""
+}
 
 *Total = ₹${Number(bill.total_amount ?? calc.grandTotal).toLocaleString("en-IN")}*`;
 };

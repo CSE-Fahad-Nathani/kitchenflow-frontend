@@ -50,7 +50,7 @@ const CalendarBillDetailView = ({
   }
 
   const dishes = bill.dishes || [];
-  const calc = calcCalendarBill(dishes);
+  const calc = calcCalendarBill(dishes, bill.discount);
 
   return (
     <div className="px-3.5 py-3 space-y-2.5 pb-52">
@@ -159,7 +159,19 @@ const CalendarBillDetailView = ({
         </div>
       ) : null}
 
-      <div className="bg-white rounded-xl border border-gray-100 p-3">
+      <div className="bg-white rounded-xl border border-gray-100 p-3 space-y-1.5">
+        {Number(bill.discount) > 0 && (
+          <>
+            <div className="flex justify-between text-[12px] text-gray-500 font-medium">
+              <span>Dishes subtotal</span>
+              <span>{money(calc.dishesSubtotal)}</span>
+            </div>
+            <div className="flex justify-between text-[12px] text-green-600 font-medium">
+              <span>Discount</span>
+              <span>-{money(bill.discount)}</span>
+            </div>
+          </>
+        )}
         <div className="flex justify-between items-baseline">
           <span className="text-[15px] font-bold text-gray-900">Grand Total</span>
           <span className="text-[18px] font-bold text-orange-500">

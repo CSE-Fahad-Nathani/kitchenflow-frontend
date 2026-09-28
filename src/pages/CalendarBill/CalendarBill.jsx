@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -8,6 +8,10 @@ import {
   increaseCalendarBillReminder,
   markCalendarBillPaid,
 } from "../../api/calendarBillApi";
+import {
+  clearOpenCreditsForCustomer,
+  fetchOpenCreditsForCustomer,
+} from "../../api/customerCreditApi";
 import { addCustomer } from "../../api/customerApi";
 import CreateCalendarBillView from "../../components/calendarBill/CreateCalendarBillView";
 import CalendarBillDetailView from "../../components/calendarBill/CalendarBillDetailView";
@@ -45,11 +49,17 @@ const CalendarBill = () => {
   const [view, setView] = useState("create");
 
   const [customer, setCustomer] = useState(initialCustomer);
+  const [discount, setDiscount] = useState("");
   const [dishes, setDishes] = useState(() => [emptyDish()]);
   const [showDates, setShowDates] = useState(true);
   const [saveNewCustomer, setSaveNewCustomer] = useState(true);
   const [addingCustomer, setAddingCustomer] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const [pendingCredit, setPendingCredit] = useState(null);
+  const [creditLoading, setCreditLoading] = useState(false);
+  const [clearingCredit, setClearingCredit] = useState(false);
+  const creditRequestIdRef = useRef(0);
 
   const [selectedId, setSelectedId] = useState(null);
   const [detail, setDetail] = useState(null);
@@ -65,13 +75,90 @@ const CalendarBill = () => {
     (customer.customer_name || "").trim() && !customer.customer_id
   );
 
-  const calc = useMemo(() => calcCalendarBill(dishes), [dishes]);
+  const calc = useMemo(
+    () => calcCalendarBill(dishes, discount),
+    [dishes, discount]
+  );
+
+  const loadPendingCredit = async (selectedCustomerId, selectedName) => {
+    if (!selectedCustomerId) {
+      setPendingCredit(null);
+      return;
+    }
+
+    const requestId = ++creditRequestIdRef.current;
+    setCreditLoading(true);
+
+    try {
+      const data = await fetchOpenCreditsForCustomer(selectedCustomerId, {
+        customer_name: selectedName || "",
+      });
+      if (requestId !== creditRequestIdRef.current) return;
+
+      if (data?.count > 0 && Number(data.total) > 0) {
+        setPendingCredit(data);
+      } else {
+        setPendingCredit(null);
+      }
+    } catch (error) {
+      console.error(error);
+      if (requestId !== creditRequestIdRef.current) return;
+      setPendingCredit(null);
+    } finally {
+      if (requestId === creditRequestIdRef.current) {
+        setCreditLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!customer.customer_id) {
+      creditRequestIdRef.current += 1;
+      setPendingCredit(null);
+      setCreditLoading(false);
+      return;
+    }
+
+    loadPendingCredit(customer.customer_id, customer.customer_name);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customer.customer_id]);
+
+  const handleApplyCreditDiscount = () => {
+    if (!pendingCredit?.total) return;
+    setDiscount(Number(pendingCredit.total).toFixed(2));
+    toast.success(
+      "Discount applied",
+      `₹${Number(pendingCredit.total).toFixed(2)} set as discount — you can still edit it.`
+    );
+  };
+
+  const handleClearPendingCredit = async () => {
+    if (!customer.customer_id || !pendingCredit?.count) return;
+
+    setClearingCredit(true);
+    try {
+      const response = await clearOpenCreditsForCustomer(customer.customer_id, {
+        customer_name: customer.customer_name || "",
+      });
+      setPendingCredit(null);
+      toast.success(
+        "Credit cleared",
+        response.message || "Open credit removed for this customer."
+      );
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed", "Could not clear credit. Try again.");
+    } finally {
+      setClearingCredit(false);
+    }
+  };
 
   const updateCustomer = (patch) => {
     setCustomer((prev) => {
       const next = { ...prev, ...patch };
       if ("customer_id" in patch && patch.customer_id == null) {
         setSaveNewCustomer(true);
+        setPendingCredit(null);
       }
       if (patch.customer_id) {
         setSaveNewCustomer(false);
@@ -82,9 +169,11 @@ const CalendarBill = () => {
 
   const resetCreateForm = () => {
     setCustomer(initialCustomer());
+    setDiscount("");
     setDishes([emptyDish()]);
     setShowDates(true);
     setSaveNewCustomer(true);
+    setPendingCredit(null);
   };
 
   useEffect(() => {
@@ -208,6 +297,7 @@ const CalendarBill = () => {
         customer_name: customer.customer_name.trim(),
         customer_mobile: (customer.customer_mobile || "").trim() || "",
         show_dates: Boolean(showDates),
+        discount: Number(discount) || 0,
         total_amount: calc.grandTotal,
         dishes: dishesPayload,
       };
@@ -367,6 +457,8 @@ const CalendarBill = () => {
         <CreateCalendarBillView
           customer={customer}
           onCustomerChange={updateCustomer}
+          discount={discount}
+          onDiscountChange={setDiscount}
           dishes={dishes}
           onAddDish={handleAddDish}
           onUpdateDish={handleUpdateDish}
@@ -394,6 +486,11 @@ const CalendarBill = () => {
               setAddingCustomer(false);
             }
           }}
+          pendingCredit={pendingCredit}
+          creditLoading={creditLoading}
+          clearingCredit={clearingCredit}
+          onApplyCreditDiscount={handleApplyCreditDiscount}
+          onClearPendingCredit={handleClearPendingCredit}
           submitting={submitting}
           onPreview={handlePreviewCreate}
         />

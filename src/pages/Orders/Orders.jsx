@@ -80,6 +80,7 @@ const Orders = () => {
   const [saveNewCustomer, setSaveNewCustomer] = useState(true);
   const [addingCustomer, setAddingCustomer] = useState(false);
   const [addingDishIndex, setAddingDishIndex] = useState(null);
+  const [activeItemIndex, setActiveItemIndex] = useState(null);
   const [pendingCredit, setPendingCredit] = useState(null);
   const [creditLoading, setCreditLoading] = useState(false);
   const [clearingCredit, setClearingCredit] = useState(false);
@@ -113,6 +114,19 @@ const Orders = () => {
   const isNewCustomerCandidate = Boolean(
     (customer || "").trim() && !customer_id
   );
+
+  useEffect(() => {
+    if (items.length === 0) {
+      setActiveItemIndex(null);
+      return;
+    }
+
+    setActiveItemIndex((prev) => {
+      if (prev == null) return items.length - 1;
+      if (prev >= items.length) return items.length - 1;
+      return prev;
+    });
+  }, [items.length]);
 
   const loadPendingCredit = async (selectedCustomerId, selectedName) => {
     if (!selectedCustomerId) {
@@ -314,10 +328,19 @@ const Orders = () => {
 
   const handleDeleteItem = (index) => {
     setItems(items.filter((_, i) => i !== index));
+    setActiveItemIndex((prev) => {
+      if (prev == null) return null;
+      if (items.length <= 1) return null;
+      if (index === prev) return Math.max(0, prev - 1);
+      if (index < prev) return prev - 1;
+      return prev;
+    });
   };
 
   const handleAddItem = () => {
+    const nextIndex = items.length;
     addItem();
+    setActiveItemIndex(nextIndex);
 
     setTimeout(() => {
       const el = scrollRef.current;
@@ -709,6 +732,8 @@ const Orders = () => {
                     key={index}
                     item={item}
                     index={index}
+                    isActive={activeItemIndex === index}
+                    onActivate={() => setActiveItemIndex(index)}
                     onChange={handleItemChange}
                     onDelete={handleDeleteItem}
                     onAddDishNow={handleAddDishNow}

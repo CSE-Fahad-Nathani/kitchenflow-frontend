@@ -215,8 +215,9 @@ const CalendarBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => 
   const isReminder = variant === "reminder";
   const reminderCount = Number(bill.reminder_count || 0);
   const dishes = bill.dishes || [];
-  const calc = calcCalendarBill(dishes);
+  const calc = calcCalendarBill(dishes, bill.discount);
   const grandTotal = Number(bill.total_amount ?? calc.grandTotal);
+  const discount = Number(bill.discount ?? calc.discount) || 0;
   const showDates = Boolean(bill.show_dates);
 
   const fileBase = isReminder
@@ -426,6 +427,36 @@ const CalendarBillPreviewModal = ({ open, bill, onClose, variant = "bill" }) => 
               })}
 
               <div style={s.divider} />
+
+              {discount > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "baseline",
+                    marginBottom: 6,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "#16a34a",
+                    }}
+                  >
+                    Discount
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      color: "#16a34a",
+                    }}
+                  >
+                    -{formatMoney(discount)}
+                  </span>
+                </div>
+              )}
 
               <div
                 style={{
