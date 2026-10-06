@@ -15,6 +15,7 @@ import SundayMenu from "./pages/SundayMenu/SundayMenu";
 import Analysis from "./pages/Analysis/Analysis";
 import Credits from "./pages/Credits/Credits";
 import Settings from "./pages/Settings/Settings";
+import ToastLab from "./pages/ToastLab/ToastLab";
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
           <Route path="/sunday-menu" element={<SundayMenu />} />
           <Route path="/analysis" element={<Analysis />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/toast" element={<ToastLab />} />
 
           <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>

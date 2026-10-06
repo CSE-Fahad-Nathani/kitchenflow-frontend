@@ -1,39 +1,323 @@
 import { useEffect, useRef, useState } from "react";
 import { useToastStore } from "../store/toastStore";
+import {
+  DEFAULT_TOAST_THEME,
+  TYPE_META,
+  getThemeColors,
+} from "../toast/toastThemes";
 
 const EXIT_MS = 260;
 
-const ACCENT = {
-  success: {
-    ink: "text-green-700",
-    soft: "bg-green-50",
-    line: "bg-green-500",
-    mark: "✓",
-  },
-  error: {
-    ink: "text-red-600",
-    soft: "bg-red-50",
-    line: "bg-red-500",
-    mark: "!",
-  },
-  warning: {
-    ink: "text-orange-600",
-    soft: "bg-orange-50",
-    line: "bg-orange-500",
-    mark: "!",
-  },
-  info: {
-    ink: "text-orange-600",
-    soft: "bg-orange-50",
-    line: "bg-orange-500",
-    mark: "i",
-  },
-  confirm: {
-    ink: "text-orange-600",
-    soft: "bg-orange-50",
-    line: "bg-orange-500",
-    mark: "?",
-  },
+const CloseBtn = ({ onClick, className }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`press-scale shrink-0 text-[11px] font-semibold ${className}`}
+  >
+    Close
+  </button>
+);
+
+const ToastBody = ({ themeId, type, title, message, onHide }) => {
+  const colors = getThemeColors(themeId, type);
+  const meta = TYPE_META[type] || TYPE_META.info;
+
+  if (themeId === "soft-bar") {
+    return (
+      <div className="relative overflow-hidden rounded-xl bg-white border border-gray-100 shadow-[0_10px_28px_rgba(15,23,42,0.12)]">
+        <div className={`absolute inset-y-0 left-0 w-1 ${colors.bar}`} />
+        <div className="pl-3.5 pr-3 py-2.5 flex items-start gap-2.5">
+          <div
+            className={`shrink-0 mt-0.5 w-7 h-7 rounded-lg ${colors.soft} ${colors.ink} flex items-center justify-center text-[12px] font-black`}
+          >
+            {meta.mark}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className={`text-[10px] font-bold uppercase tracking-[0.12em] ${colors.ink}`}>
+                  {meta.label}
+                </p>
+                <p className="text-[13.5px] font-semibold text-gray-900 leading-tight mt-0.5">
+                  {title}
+                </p>
+                {message ? (
+                  <p className="mt-0.5 text-[12px] text-gray-500 leading-snug line-clamp-2">
+                    {message}
+                  </p>
+                ) : null}
+              </div>
+              <CloseBtn onClick={onHide} className="text-gray-400 hover:text-gray-700 pt-0.5" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (themeId === "glass") {
+    return (
+      <div className="relative overflow-hidden rounded-2xl border border-white/60 bg-white/70 backdrop-blur-xl shadow-[0_12px_40px_rgba(15,23,42,0.16)]">
+        <div className="px-3.5 py-2.5 flex items-start gap-2.5">
+          <div
+            className={`shrink-0 mt-0.5 w-7 h-7 rounded-full ${colors.soft} ${colors.ink} flex items-center justify-center text-[12px] font-black`}
+          >
+            {meta.mark}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[13.5px] font-semibold text-gray-900 leading-tight">
+                  {title}
+                </p>
+                {message ? (
+                  <p className="mt-0.5 text-[12px] text-gray-600 leading-snug line-clamp-2">
+                    {message}
+                  </p>
+                ) : null}
+              </div>
+              <CloseBtn onClick={onHide} className="text-gray-500 hover:text-gray-800 pt-0.5" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (themeId === "solid") {
+    return (
+      <div
+        className={`relative overflow-hidden rounded-xl ${colors.fill} shadow-[0_12px_28px_rgba(15,23,42,0.22)]`}
+      >
+        <div className="px-3.5 py-2.5 flex items-start gap-2.5">
+          <div
+            className={`shrink-0 mt-0.5 w-7 h-7 rounded-lg ${colors.soft} ${colors.ink} flex items-center justify-center text-[12px] font-black`}
+          >
+            {meta.mark}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className={`text-[13.5px] font-semibold leading-tight ${colors.ink}`}>
+                  {title}
+                </p>
+                {message ? (
+                  <p className={`mt-0.5 text-[12px] leading-snug line-clamp-2 ${colors.mute}`}>
+                    {message}
+                  </p>
+                ) : null}
+              </div>
+              <CloseBtn
+                onClick={onHide}
+                className={`${colors.mute} hover:opacity-100 opacity-80 pt-0.5`}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (themeId === "minimal") {
+    return (
+      <div className="relative overflow-hidden rounded-lg bg-white border border-gray-200 shadow-sm">
+        <div className="px-3 py-2.5 flex items-start gap-2">
+          <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${colors.dot}`} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-gray-900 leading-tight">
+                  {title}
+                </p>
+                {message ? (
+                  <p className="mt-0.5 text-[11.5px] text-gray-500 leading-snug line-clamp-2">
+                    {message}
+                  </p>
+                ) : null}
+              </div>
+              <CloseBtn onClick={onHide} className="text-gray-400 hover:text-gray-700" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (themeId === "icon-card") {
+    return (
+      <div className="relative overflow-hidden rounded-2xl bg-white border border-gray-100 shadow-[0_10px_30px_rgba(15,23,42,0.12)]">
+        <div className="px-3.5 py-3 flex items-start gap-3">
+          <div
+            className={`shrink-0 w-9 h-9 rounded-xl ${colors.soft} ${colors.softInk} flex items-center justify-center text-[14px] font-black shadow-sm`}
+          >
+            {meta.mark}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className={`text-[10px] font-bold uppercase tracking-[0.14em] ${colors.ink}`}>
+                  {meta.label}
+                </p>
+                <p className="text-[14px] font-bold text-gray-900 leading-tight mt-0.5">
+                  {title}
+                </p>
+                {message ? (
+                  <p className="mt-1 text-[12px] text-gray-500 leading-snug line-clamp-2">
+                    {message}
+                  </p>
+                ) : null}
+              </div>
+              <CloseBtn onClick={onHide} className="text-gray-400 hover:text-gray-700" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (themeId === "dark") {
+    return (
+      <div className="relative overflow-hidden rounded-2xl bg-[#17120f] text-white shadow-[0_12px_32px_rgba(26,18,11,0.35)] border border-white/5">
+        <div className="px-3.5 py-2.5 flex items-start gap-2.5">
+          <div
+            className={`shrink-0 mt-0.5 w-7 h-7 rounded-lg ${colors.soft} ${colors.ink} flex items-center justify-center text-[12px] font-black`}
+          >
+            {meta.mark}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className={`text-[10px] font-bold uppercase tracking-[0.12em] ${colors.ink}`}>
+                  {meta.label}
+                </p>
+                <p className="text-[13.5px] font-semibold leading-tight mt-0.5 text-white">
+                  {title}
+                </p>
+                {message ? (
+                  <p className="mt-0.5 text-[12px] text-white/65 leading-snug line-clamp-2">
+                    {message}
+                  </p>
+                ) : null}
+              </div>
+              <CloseBtn onClick={onHide} className="text-white/45 hover:text-white/80 pt-0.5" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (themeId === "stripe") {
+    return (
+      <div className="relative overflow-hidden rounded-xl bg-white border border-gray-100 shadow-[0_10px_28px_rgba(15,23,42,0.12)]">
+        <div className={`h-1.5 w-full ${colors.bar}`} />
+        <div className="px-3.5 py-2.5">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className={`text-[10px] font-bold uppercase tracking-[0.12em] ${colors.ink}`}>
+                {meta.label}
+              </p>
+              <p className="text-[13.5px] font-semibold text-gray-900 leading-tight mt-0.5">
+                {title}
+              </p>
+              {message ? (
+                <p className="mt-0.5 text-[12px] text-gray-500 leading-snug line-clamp-2">
+                  {message}
+                </p>
+              ) : null}
+            </div>
+            <CloseBtn onClick={onHide} className="text-gray-400 hover:text-gray-700" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (themeId === "compact") {
+    return (
+      <div className="relative overflow-hidden rounded-lg bg-white border border-gray-200 shadow-md">
+        <div className="px-2.5 py-2 flex items-center gap-2">
+          <div
+            className={`shrink-0 w-6 h-6 rounded-md ${colors.soft} ${colors.ink} flex items-center justify-center text-[11px] font-black`}
+          >
+            {meta.mark}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[12.5px] font-semibold text-gray-900 leading-tight truncate">
+              {title}
+            </p>
+            {message ? (
+              <p className="text-[11px] text-gray-500 leading-snug truncate">
+                {message}
+              </p>
+            ) : null}
+          </div>
+          <CloseBtn onClick={onHide} className="text-gray-400 hover:text-gray-700" />
+        </div>
+      </div>
+    );
+  }
+
+  if (themeId === "tinted") {
+    return (
+      <div
+        className={`relative overflow-hidden rounded-xl border ${colors.fill} ${colors.border} shadow-[0_8px_24px_rgba(15,23,42,0.08)]`}
+      >
+        <div className="px-3.5 py-2.5 flex items-start gap-2.5">
+          <div
+            className={`shrink-0 mt-0.5 w-7 h-7 rounded-lg ${colors.soft} ${colors.ink} flex items-center justify-center text-[12px] font-black`}
+          >
+            {meta.mark}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className={`text-[13.5px] font-semibold leading-tight ${colors.ink}`}>
+                  {title}
+                </p>
+                {message ? (
+                  <p className={`mt-0.5 text-[12px] leading-snug line-clamp-2 ${colors.mute}`}>
+                    {message}
+                  </p>
+                ) : null}
+              </div>
+              <CloseBtn onClick={onHide} className={`${colors.mute} hover:opacity-100 pt-0.5`} />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // outline (default fallback)
+  return (
+    <div
+      className={`relative overflow-hidden rounded-xl bg-white border-2 ${colors.border} shadow-[0_10px_28px_rgba(15,23,42,0.1)]`}
+    >
+      <div className="px-3.5 py-2.5 flex items-start gap-2.5">
+        <div
+          className={`shrink-0 mt-0.5 w-7 h-7 rounded-lg ${colors.soft} ${colors.ink} flex items-center justify-center text-[12px] font-black`}
+        >
+          {meta.mark}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className={`text-[13.5px] font-bold leading-tight ${colors.ink}`}>
+                {title}
+              </p>
+              {message ? (
+                <p className="mt-0.5 text-[12px] text-gray-600 leading-snug line-clamp-2">
+                  {message}
+                </p>
+              ) : null}
+            </div>
+            <CloseBtn onClick={onHide} className="text-gray-400 hover:text-gray-700 pt-0.5" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const Toast = () => {
@@ -47,6 +331,7 @@ const Toast = () => {
     cancelLabel,
     onConfirm,
     onCancel,
+    themeId,
     hide,
   } = useToastStore();
 
@@ -60,6 +345,7 @@ const Toast = () => {
     duration: 3000,
     confirmLabel: "Confirm",
     cancelLabel: "Cancel",
+    themeId: DEFAULT_TOAST_THEME,
   });
 
   useEffect(() => {
@@ -76,6 +362,7 @@ const Toast = () => {
         duration,
         confirmLabel,
         cancelLabel,
+        themeId,
       };
       setLeaving(false);
       setMounted(true);
@@ -104,9 +391,9 @@ const Toast = () => {
 
   const view = leaving
     ? snapshot.current
-    : { type, title, message, duration, confirmLabel, cancelLabel };
+    : { type, title, message, duration, confirmLabel, cancelLabel, themeId };
 
-  const accent = ACCENT[view.type] || ACCENT.info;
+  const activeTheme = view.themeId || DEFAULT_TOAST_THEME;
   const isConfirm = view.type === "confirm";
 
   const finishHide = (fn) => {
@@ -117,6 +404,11 @@ const Toast = () => {
   };
 
   if (isConfirm) {
+    const accent = getThemeColors(
+      activeTheme === "solid" || activeTheme === "dark" ? "soft-bar" : activeTheme,
+      "info"
+    );
+
     return (
       <>
         <div
@@ -139,9 +431,9 @@ const Toast = () => {
           <div className="rounded-[1.25rem] bg-[#fffaf6] border border-orange-200/80 overflow-hidden shadow-[0_20px_50px_rgba(26,18,11,0.28)]">
             <div className="px-5 pt-5 pb-2 text-center">
               <div
-                className={`mx-auto mb-3 w-10 h-10 rounded-2xl ${accent.soft} ${accent.ink} flex items-center justify-center text-[1.15rem] font-black`}
+                className={`mx-auto mb-3 w-10 h-10 rounded-2xl ${accent.soft || "bg-orange-50"} ${accent.ink || "text-orange-600"} flex items-center justify-center text-[1.15rem] font-black`}
               >
-                {accent.mark}
+                ?
               </div>
               <h3 className="text-[1.05rem] font-bold text-[#1a120b] tracking-tight leading-snug">
                 {view.title}
@@ -177,61 +469,18 @@ const Toast = () => {
 
   return (
     <div
-      className={`fixed bottom-20 left-1/2 z-[99999] w-[min(92vw,22rem)] ${
+      className={`fixed z-[99999] w-[min(92vw,22rem)] top-[max(0.75rem,env(safe-area-inset-top))] right-[max(0.75rem,env(safe-area-inset-right))] ${
         leaving ? "animate-toast-dock-out" : "animate-toast-dock-in"
       }`}
       role="status"
     >
-      <div className="relative overflow-hidden rounded-2xl bg-[#1a120b] text-[#fffaf6] shadow-[0_12px_32px_rgba(26,18,11,0.35)]">
-        <div className="px-3.5 py-2.5 flex items-start gap-2.5">
-          <div
-            className={`shrink-0 mt-0.5 w-7 h-7 rounded-lg ${accent.soft} ${accent.ink} flex items-center justify-center text-[12px] font-black`}
-            aria-hidden
-          >
-            {accent.mark}
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className={`text-[10px] font-bold uppercase tracking-[0.12em] ${accent.ink}`}>
-                  {view.type === "success"
-                    ? "Success"
-                    : view.type === "error"
-                      ? "Error"
-                      : view.type === "warning"
-                        ? "Warning"
-                        : "Info"}
-                </p>
-                <p className="text-[13.5px] font-semibold leading-tight mt-0.5 truncate text-white">
-                  {view.title}
-                </p>
-                {view.message && (
-                  <p className="mt-0.5 text-[12px] text-white/65 leading-snug line-clamp-2">
-                    {view.message}
-                  </p>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={hide}
-                className="press-scale shrink-0 text-[11px] font-semibold text-white/45 hover:text-white/80 pt-0.5"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {!leaving && (
-          <div
-            key={`${view.title}-${view.message}-${view.duration}`}
-            className={`h-[2px] w-full ${accent.line} animate-toast-progress`}
-            style={{ animationDuration: `${view.duration}ms` }}
-          />
-        )}
-      </div>
+      <ToastBody
+        themeId={activeTheme}
+        type={view.type}
+        title={view.title}
+        message={view.message}
+        onHide={hide}
+      />
     </div>
   );
 };

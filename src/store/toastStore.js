@@ -1,6 +1,20 @@
 import { create } from "zustand";
+import {
+  DEFAULT_TOAST_THEME,
+  TOAST_THEME_STORAGE_KEY,
+  isValidToastTheme,
+} from "../toast/toastThemes";
 
 let hideTimer = null;
+
+const readStoredTheme = () => {
+  try {
+    localStorage.setItem(TOAST_THEME_STORAGE_KEY, DEFAULT_TOAST_THEME);
+  } catch {
+    /* ignore */
+  }
+  return DEFAULT_TOAST_THEME;
+};
 
 export const useToastStore = create((set, get) => ({
   visible: false,
@@ -12,6 +26,17 @@ export const useToastStore = create((set, get) => ({
   cancelLabel: "Cancel",
   onConfirm: null,
   onCancel: null,
+  themeId: readStoredTheme(),
+
+  setTheme: (themeId) => {
+    const next = isValidToastTheme(themeId) ? themeId : DEFAULT_TOAST_THEME;
+    try {
+      localStorage.setItem(TOAST_THEME_STORAGE_KEY, next);
+    } catch {
+      /* ignore */
+    }
+    set({ themeId: next });
+  },
 
   hide: () => {
     if (hideTimer) {
@@ -53,7 +78,6 @@ export const useToastStore = create((set, get) => ({
       onCancel,
     });
 
-    // Confirm toasts stay until user acts
     if (type !== "confirm") {
       hideTimer = setTimeout(() => {
         get().hide();
