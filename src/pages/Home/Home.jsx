@@ -6,6 +6,7 @@ import {
   Star,
   ChartColumn,
   ChevronRight,
+  Route,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -29,6 +30,12 @@ import { useToastStore } from "../../store/toastStore";
 import PaidExtraModal from "../../components/credits/PaidExtraModal";
 
 const menus = [
+  {
+    title: "Delivery Route",
+    subtitle: "Plan today's stops & addresses",
+    icon: Route,
+    path: "/delivery-route",
+  },
   {
     title: "Customers",
     subtitle: "Add / Update Customers",

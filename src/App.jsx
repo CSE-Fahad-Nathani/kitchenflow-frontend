@@ -16,6 +16,7 @@ import Analysis from "./pages/Analysis/Analysis";
 import Credits from "./pages/Credits/Credits";
 import Settings from "./pages/Settings/Settings";
 import ToastLab from "./pages/ToastLab/ToastLab";
+import DeliveryRoute from "./pages/DeliveryRoute/DeliveryRoute";
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
           <Route path="/orders/datewise" element={<DatewiseBill />} />
           <Route path="/orders/calendar" element={<CalendarBill />} />
           <Route path="/history" element={<History />} />
+          <Route path="/delivery-route" element={<DeliveryRoute />} />
 
           <Route path="/credits" element={<Credits />} />
           <Route path="/credits/today" element={<Credits />} />

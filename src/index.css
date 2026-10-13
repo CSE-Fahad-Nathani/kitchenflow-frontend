@@ -110,3 +110,48 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
 }
+
+/* Delivery Route — premium motion */
+@keyframes routeFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes routePreviewIn {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes routeProgressGlow {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-route-fade-up {
+  animation: routeFadeUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-route-preview-in {
+  animation: routePreviewIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-route-progress-glow {
+  animation: routeProgressGlow 2.4s ease-in-out infinite;
+}
